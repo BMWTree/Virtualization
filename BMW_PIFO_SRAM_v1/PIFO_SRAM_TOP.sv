@@ -152,11 +152,11 @@ genvar i,j;
 generate
    for (i=0;i<LEVEL;i=i+1) begin : pifo_loop
          PIFO_SRAM #(
-		    .PTW (PTW),
-          .MTW (MTW),
-			.CTW (CTW),
-         .ADW (ADW)
-		 ) u_PIFO (
+            .PTW (PTW),
+            .MTW (MTW),
+            .CTW (CTW),
+            .ADW (ADW)
+         ) u_PIFO (
             .i_clk           ( i_clk                        ),
             .i_arst_n        ( i_arst_n                     ),
 
@@ -201,7 +201,7 @@ generate
 
    for (i=1; i<LEVEL; i=i+1) begin : sram_inst
       INFER_SDPRAM #( 
-	     .DATA_WIDTH ( 4 * (CTW + MTW + PTW)              ), 
+	      .DATA_WIDTH ( 4 * (CTW + MTW + PTW)              ), 
          .ADDR_WIDTH ( 2 * i                           ), 
          .ARCH       ( 0                                  ), 
          .RDW_MODE   ( 1                                  ),

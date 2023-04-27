@@ -38,7 +38,7 @@ module PIFO_SRAM
    
    // From/To Child
    output                         o_push,        // O - Push Command to Child
-   output [(MTW+PTW)-1:0]         o_push_data,   // O - Push Data to Child
+//    output [(MTW+PTW)-1:0]         o_push_data,   // O - Push Data to Child
    
    output                         o_pop,         // O - Pop Command to Child   
    input  [(MTW+PTW)-1:0]         i_pop_data,    // I - Pop Data from Child
@@ -83,7 +83,6 @@ localparam    ST_IDLE     = 2'b00,
    
    // Push to child
    reg                   push;
-   reg [(MTW+PTW)-1:0]         push_data;
       
    reg                   pop;
    reg [(MTW+PTW)-1:0]         pop_data;   
@@ -91,7 +90,9 @@ localparam    ST_IDLE     = 2'b00,
    reg [1:0]             min_sub_tree;
    reg [1:0]             min_data_port;
    
-   reg [(MTW+PTW)-1:0]         ipushd_latch;
+   // push data reg
+   reg [(MTW+PTW)-1:0]         push_data;
+   reg [(MTW+PTW)-1:0]         push_data_nxt;
 
 	//for parent/child node
    reg [ADW-1:0]         my_addr;
@@ -119,7 +120,7 @@ localparam    ST_IDLE     = 2'b00,
    begin
       if (!i_arst_n) begin
          fsm[1:0]     <= ST_IDLE;
-         ipushd_latch <= 'd0;	
+         push_data <= 'd0;	
 		 my_addr      <= 'd0;
 
       end else begin
@@ -128,18 +129,18 @@ localparam    ST_IDLE     = 2'b00,
 			   case ({i_push, i_pop})
                   2'b00,
 				  2'b11: begin // Not allow concurrent read and write
-                     fsm[1:0]    <= ST_IDLE;
-                     ipushd_latch <= 'd0;
+                    fsm[1:0]    <= ST_IDLE;
+                    push_data <= 'd0;
 					my_addr      <= 'd0;		 
 				  end
                   2'b01: begin // pop
                     fsm[1:0]    <= ST_POP;
-                    ipushd_latch <= 'd0;
+                    push_data <= 'd0;
 					my_addr      <= i_my_addr;	 
 				  end
 				  2'b10: begin // push
                     fsm[1:0]     <= ST_PUSH;
-                    ipushd_latch <= i_push_data;		
+                    push_data <= push_data_nxt;		
 					my_addr      <= i_my_addr; 
 				  end
 			   endcase
@@ -150,24 +151,24 @@ localparam    ST_IDLE     = 2'b00,
                   2'b00,
 				  2'b11: begin 
                      fsm[1:0]    <= ST_IDLE;
-                     ipushd_latch <= 'd0;	
+                     push_data <= 'd0;	
 					 my_addr      <= 'd0; 
 				  end
                   2'b01: begin
                     fsm[1:0]    <= ST_POP;
-                    ipushd_latch <= 'd0;		 
+                    push_data <= 'd0;		 
 					my_addr      <= i_my_addr;
 				  end
 				  2'b10: begin 
                     fsm[1:0]    <= ST_PUSH;
-                    ipushd_latch <= i_push_data;
+                    push_data <= push_data_nxt;
 					my_addr      <= i_my_addr;			 
 				  end
 			   endcase   
 			end   
 
             ST_POP: begin
-               ipushd_latch <= ipushd_latch;		
+               push_data <= push_data;		
 			   my_addr      <= my_addr;
   		       fsm[1:0]     <= ST_WB;
             end		
@@ -177,17 +178,17 @@ localparam    ST_IDLE     = 2'b00,
                   2'b00,
 				  2'b11: begin 
                      fsm[1:0]    <= ST_IDLE;
-                     ipushd_latch <= 'd0;		
+                     push_data <= 'd0;		
 					 my_addr      <= 'd0; 
 				  end
                   2'b01: begin
                     fsm[1:0]    <= ST_POP;
-                    ipushd_latch <= 'd0;	
+                    push_data <= 'd0;	
 					my_addr      <= i_my_addr;		 
 				  end
 				  2'b10: begin 
                     fsm[1:0]    <= ST_PUSH;
-                    ipushd_latch <= i_push_data;	
+                    push_data <= push_data_nxt;	
 					my_addr      <= i_my_addr; 
 				  end
 			   endcase
@@ -199,12 +200,13 @@ localparam    ST_IDLE     = 2'b00,
 //-----------------------------------------------------------------------------
 // Combinatorial Logic / Continuous Assignments
 //-----------------------------------------------------------------------------
+//TODO: push_data_nxt 
    always @ *
    begin
       if (fsm == ST_POP || fsm == ST_WB) begin
 
     	 push       = 1'd0;
-		 push_data  = 'd0;
+		 push_data_nxt  = 'd0;
 
          case (min_data_port[1:0])
             2'b00: begin
@@ -263,17 +265,17 @@ localparam    ST_IDLE     = 2'b00,
 			   child_addr     = 4 * my_addr;
 			   if (i_read_data[PTW-1:0] != {PTW{1'b1}}) begin
     		      push         = 1'b1;
-				  if (ipushd_latch[(PTW)-1:0] < i_read_data[(PTW)-1:0]) begin
-		             push_data = i_read_data[(MTW+PTW)-1:0];
-					 wdata     = {i_read_data[4*(MTW+PTW+CTW)-1:(MTW+PTW+CTW)], i_read_data[(MTW+PTW+CTW)-1:(MTW+PTW)]+{{(CTW-1){1'b0}},1'b1}, ipushd_latch};					 
+				  if (push_data[(PTW)-1:0] < i_read_data[(PTW)-1:0]) begin
+		             push_data_nxt = i_read_data[(MTW+PTW)-1:0];
+					 wdata     = {i_read_data[4*(MTW+PTW+CTW)-1:(MTW+PTW+CTW)], i_read_data[(MTW+PTW+CTW)-1:(MTW+PTW)]+{{(CTW-1){1'b0}},1'b1}, push_data};					 
 				  end else begin
-		             push_data = ipushd_latch;
+		             push_data_nxt = push_data;
 				     wdata     = {i_read_data[4*(MTW+PTW+CTW)-1:(MTW+PTW+CTW)], i_read_data[(MTW+PTW+CTW)-1:(MTW+PTW)]+{{(CTW-1){1'b0}},1'b1}, i_read_data[(MTW+PTW)-1:0]};					 
                   end						
 			   end else begin
     		      push         = 1'd0;
-		          push_data    = 'd0;
- 				  wdata        = {i_read_data[4*(MTW+PTW+CTW)-1:(MTW+PTW+CTW)], i_read_data[(MTW+PTW+CTW)-1:(MTW+PTW)]+{{(CTW-1){1'b0}},1'b1}, ipushd_latch};					 
+		          push_data_nxt    = 'd0;
+ 				  wdata        = {i_read_data[4*(MTW+PTW+CTW)-1:(MTW+PTW+CTW)], i_read_data[(MTW+PTW+CTW)-1:(MTW+PTW)]+{{(CTW-1){1'b0}},1'b1}, push_data};					 
 			   end
 			end
 
@@ -282,17 +284,17 @@ localparam    ST_IDLE     = 2'b00,
 			   child_addr      = 4 * my_addr + 1;
 			   if (i_read_data[2*PTW+(MTW+CTW)-1:(MTW+PTW+CTW)] != {PTW{1'b1}}) begin
     		      push         = 1'b1;
-				  if (ipushd_latch[(PTW)-1:0] < i_read_data[2*PTW+MTW+CTW-1:(MTW+PTW+CTW)]) begin
- 		             push_data = i_read_data[(2*(MTW+PTW)+CTW)-1:(CTW+MTW+PTW)];
-					 wdata     = {i_read_data[4*(CTW+MTW+PTW)-1:2*(CTW+MTW+PTW)], i_read_data[2*(CTW+MTW+PTW)-1:2*(MTW+PTW)+CTW]+{{(CTW-1){1'b0}},1'b1}, ipushd_latch, i_read_data[(CTW+MTW+PTW)-1:0]};
+				  if (push_data[(PTW)-1:0] < i_read_data[2*PTW+MTW+CTW-1:(MTW+PTW+CTW)]) begin
+ 		             push_data_nxt = i_read_data[(2*(MTW+PTW)+CTW)-1:(CTW+MTW+PTW)];
+					 wdata     = {i_read_data[4*(CTW+MTW+PTW)-1:2*(CTW+MTW+PTW)], i_read_data[2*(CTW+MTW+PTW)-1:2*(MTW+PTW)+CTW]+{{(CTW-1){1'b0}},1'b1}, push_data, i_read_data[(CTW+MTW+PTW)-1:0]};
 				  end else begin
-		             push_data = ipushd_latch;
+		             push_data_nxt = push_data;
 					 wdata     = {i_read_data[4*(CTW+MTW+PTW)-1:2*(CTW+MTW+PTW)], i_read_data[2*(CTW+MTW+PTW)-1:2*(MTW+PTW)+CTW]+{{(CTW-1){1'b0}},1'b1}, i_read_data[2*(MTW+PTW)+CTW-1:0]};
 				  end
 			   end else begin
     		      push         = 1'd0;
-		          push_data    = 'd0;
- 				  wdata        = {i_read_data[4*(CTW+MTW+PTW)-1:2*(CTW+MTW+PTW)], i_read_data[2*(CTW+MTW+PTW)-1:2*(MTW+PTW)+CTW]+{{(CTW-1){1'b0}},1'b1}, ipushd_latch, i_read_data[(CTW+MTW+PTW)-1:0]};
+		          push_data_nxt    = 'd0;
+ 				  wdata        = {i_read_data[4*(CTW+MTW+PTW)-1:2*(CTW+MTW+PTW)], i_read_data[2*(CTW+MTW+PTW)-1:2*(MTW+PTW)+CTW]+{{(CTW-1){1'b0}},1'b1}, push_data, i_read_data[(CTW+MTW+PTW)-1:0]};
 			   end
 			end
 
@@ -301,17 +303,17 @@ localparam    ST_IDLE     = 2'b00,
 			   child_addr      = 4 * my_addr + 2;
 			   if (i_read_data[(3*PTW+2*(MTW+CTW))-1:2*(MTW+PTW+CTW)] != {PTW{1'b1}}) begin
     		      push         = 1'b1;
-				  if (ipushd_latch[(PTW)-1:0] < i_read_data[(3*PTW+2*(MTW+CTW))-1:2*(MTW+PTW+CTW)]) begin
- 		             push_data = i_read_data[(3*(MTW+PTW)+2*CTW)-1:2*(CTW+MTW+PTW)];
-  					 wdata     = {i_read_data[4*(CTW+MTW+PTW)-1:3*(CTW+MTW+PTW)], i_read_data[3*(CTW+MTW+PTW)-1:3*(MTW+PTW)+2*CTW]+{{(CTW-1){1'b0}},1'b1}, ipushd_latch, i_read_data[2*(CTW+MTW+PTW)-1:0]};
+				  if (push_data[(PTW)-1:0] < i_read_data[(3*PTW+2*(MTW+CTW))-1:2*(MTW+PTW+CTW)]) begin
+ 		             push_data_nxt = i_read_data[(3*(MTW+PTW)+2*CTW)-1:2*(CTW+MTW+PTW)];
+  					 wdata     = {i_read_data[4*(CTW+MTW+PTW)-1:3*(CTW+MTW+PTW)], i_read_data[3*(CTW+MTW+PTW)-1:3*(MTW+PTW)+2*CTW]+{{(CTW-1){1'b0}},1'b1}, push_data, i_read_data[2*(CTW+MTW+PTW)-1:0]};
 				  end else begin
- 		             push_data = ipushd_latch;
+ 		             push_data_nxt = push_data;
   					 wdata     = {i_read_data[4*(CTW+MTW+PTW)-1:3*(CTW+MTW+PTW)], i_read_data[3*(CTW+MTW+PTW)-1:3*(MTW+PTW)+2*CTW]+{{(CTW-1){1'b0}},1'b1}, i_read_data[3*(MTW+PTW)+2*CTW-1:0]};
                   end						
 			   end else begin
     		      push         = 1'd0;
-		          push_data    = 'd0;
- 				  wdata        = {i_read_data[4*(CTW+MTW+PTW)-1:3*(CTW+MTW+PTW)], i_read_data[3*(CTW+MTW+PTW)-1:3*(MTW+PTW)+2*CTW]+{{(CTW-1){1'b0}},1'b1}, ipushd_latch, i_read_data[2*(CTW+MTW+PTW)-1:0]};
+		          push_data_nxt    = 'd0;
+ 				  wdata        = {i_read_data[4*(CTW+MTW+PTW)-1:3*(CTW+MTW+PTW)], i_read_data[3*(CTW+MTW+PTW)-1:3*(MTW+PTW)+2*CTW]+{{(CTW-1){1'b0}},1'b1}, push_data, i_read_data[2*(CTW+MTW+PTW)-1:0]};
 			   end
 			end
 			2'b11: begin // push 3
@@ -319,23 +321,23 @@ localparam    ST_IDLE     = 2'b00,
 			   child_addr      = 4 * my_addr + 3;
 			   if (i_read_data[(4*PTW+3*(MTW+CTW))-1:3*(MTW+PTW+CTW)] != {PTW{1'b1}}) begin
      		      push         = 1'b1;
-				  if (ipushd_latch[(PTW)-1:0] < i_read_data[(4*PTW+3*(MTW+CTW))-1:3*(MTW+PTW+CTW)]) begin
-		             push_data = i_read_data[(4*(MTW+PTW)+3*CTW)-1:3*(CTW+MTW+PTW)];
-					 wdata     = {i_read_data[4*(CTW+MTW+PTW)-1:4*(MTW+PTW)+3*CTW]+{{(CTW-1){1'b0}},1'b1}, ipushd_latch, i_read_data[3*(CTW+MTW+PTW)-1:0]};
+				  if (push_data[(PTW)-1:0] < i_read_data[(4*PTW+3*(MTW+CTW))-1:3*(MTW+PTW+CTW)]) begin
+		             push_data_nxt = i_read_data[(4*(MTW+PTW)+3*CTW)-1:3*(CTW+MTW+PTW)];
+					 wdata     = {i_read_data[4*(CTW+MTW+PTW)-1:4*(MTW+PTW)+3*CTW]+{{(CTW-1){1'b0}},1'b1}, push_data, i_read_data[3*(CTW+MTW+PTW)-1:0]};
 				  end else begin
-		             push_data = ipushd_latch;
+		             push_data_nxt = push_data;
 					 wdata     = {i_read_data[4*(CTW+MTW+PTW)-1:4*(MTW+PTW)+3*CTW]+{{(CTW-1){1'b0}},1'b1}, i_read_data[4*(MTW+PTW)+3*CTW-1:0]};
                   end						
 			   end else begin
     		      push         = 1'd0;
-		          push_data    = 'd0;
-  				  wdata        = {i_read_data[4*(CTW+MTW+PTW)-1:4*(MTW+PTW)+3*CTW]+{{(CTW-1){1'b0}},1'b1}, ipushd_latch, i_read_data[3*(CTW+MTW+PTW)-1:0]};
+		          push_data_nxt    = 'd0;
+  				  wdata        = {i_read_data[4*(CTW+MTW+PTW)-1:4*(MTW+PTW)+3*CTW]+{{(CTW-1){1'b0}},1'b1}, push_data, i_read_data[3*(CTW+MTW+PTW)-1:0]};
 			   end
 		    end
 		 endcase		
       end else begin
     	 push        = 1'd0;
-		 push_data   = 'd0;
+		 push_data_nxt   = 'd0;
 		 write       = 1'b0;
   		 wdata       = 'd0;         
 		 pop         = 1'b0;                 
@@ -399,7 +401,7 @@ localparam    ST_IDLE     = 2'b00,
    assign o_write_data  = wdata;
    
    assign o_push        = push;
-   assign o_push_data   = push_data;
+//    assign o_push_data   = push_data_nxt;
    assign o_pop         = pop;
    
    assign o_pop_data    = pop_data;
