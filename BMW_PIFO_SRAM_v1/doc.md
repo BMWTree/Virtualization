@@ -51,3 +51,31 @@ pop_data 变成 pop_data_nxt，i_pop_data 变成 pop_data
 赋值逻辑看代码吧
 
 卡在状态机这里，pop_data 何时变为 pop_data_nxt
+
+
+
+
+
+不行啊，这个 push 和 pop 不对称的问题还是比较难搞的，我这样计划，把 push 和 pop 拆开，然后 push 交给一个 push_RPU 做，pop 用两个 pop_RPU 绑起来做，然后最小单元变成一个 push_RPU +两个 pop_RPU
+
+TODO:
+
+1. 拆分
+
+2. push RPU 的组织（基本完成了，需要加层数以及输入输出信号）
+3. pop RPU 的组织（完成了两个的连接，需要加层数以及输入输出信号）
+
+
+iverilog INFER_SDPRAM.v PIFO_SRAM_TOP.sv PIFO_SRAM.v TC_SRAM_NEW.sv
+vvp a.out
+https://blog.csdn.net/lzl1342848782/article/details/124754271
+
+
+
+PUSH_RPU 和 POP_RPU_PAIR 已经完成了（但还没有测试）
+
+TODO: 
+
+1. RPU 和 SRAM 之间连接，并考虑层数的问题（之前的 RPU 是固定连接在一层上的，所以地址的计算只是一层内的，后面连接的时候，你需要考虑层数的问题）
+2. 连接测试（测试先不用重写，就直接接上，一直 push（记录 push 多少个数据，ready 的次数） 一直 pop 也无所谓（把数据pop完，最后看一下次数））
+

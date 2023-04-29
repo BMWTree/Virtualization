@@ -41,7 +41,7 @@ reg            pop;
 reg [9:0]      push_data;
 integer        data_gen [49:0];
 integer        i;
-reg [9:0]      pop_data;
+wire [9:0]      pop_data;
 //-----------------------------------------------------------------------------
 // Instantiations
 //-----------------------------------------------------------------------------
@@ -69,6 +69,12 @@ always #4 begin clk = ~clk; end
 //-----------------------------------------------------------------------------
 // Initial
 //-----------------------------------------------------------------------------  
+
+initial begin            
+   $dumpfile("wave.vcd"); // 指定用作dumpfile的文件
+   $dumpvars; // dump all vars
+end
+
 initial begin
     for (i=0;i<50;i=i+1) begin
       data_gen[i] = $dist_uniform(seed,0,1023);
