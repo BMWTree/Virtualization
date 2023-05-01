@@ -79,3 +79,19 @@ TODO:
 1. RPU 和 SRAM 之间连接，并考虑层数的问题（之前的 RPU 是固定连接在一层上的，所以地址的计算只是一层内的，后面连接的时候，你需要考虑层数的问题）
 2. 连接测试（测试先不用重写，就直接接上，一直 push（记录 push 多少个数据，ready 的次数） 一直 pop 也无所谓（把数据pop完，最后看一下次数））
 
+iverilog -g2005-sv INFER_SDPRAM.v PIFO_SRAM_TOP.sv PUSH_RPU.sv POP_RPU.sv POP_RPU_PAIR.sv TC_SRAM_NEW.sv
+
+vvp a.out
+
+ram 的读取是下周期拿到数据，写是当前周期完成写入
+
+所以读取的时候，不应该当前周期用，而是应该下一周期用
+
+好像是 level 应该延一个周期，那么 read_level 和 write_level 就是同一个 level，不是的 read_level 还是有用的，addr 和 re 跟 read_level 走，data 跟 write_level 走
+
+
+目前大致可以通过测试了，pop 可以出来数据了（而且比较正常
+
+目前测试还比较简陋，没有理会ready的情况，只是一直 push 或者一直 pop
+
+

@@ -115,19 +115,29 @@ endfunction
 // Register and Wire Declarations
 //-----------------------------------------------------------------------------
 
-   wire [LEVEL-1:0]                    push_up;
-   wire [(MTW+PTW)-1:0]                push_data_up [0:LEVEL-1];
-   wire [LEVEL-1:0]                    pop_up;
-   wire [(MTW+PTW)-1:0]                pop_data_up  [0:LEVEL-1];
-   wire                                push_dn      [0:LEVEL-1];
-   wire [(MTW+PTW)-1:0]                push_data_dn [0:LEVEL-1];
-   wire                                pop_dn       [0:LEVEL-1];
-   wire [(MTW+PTW)-1:0]                pop_data_dn  [0:LEVEL-1];
-   
-   wire [LEVEL - 1:0]                  read;
-   wire [LEVEL - 1:0]                  write;
-   wire [4*(CTW+MTW+PTW)-1:0]          read_data    [0:LEVEL - 1];
-   wire [4*(CTW+MTW+PTW)-1:0]          write_data   [0:LEVEL - 1];   
+   wire                                push_ready;
+
+   wire                                push_rpu_read;
+   wire                                push_rpu_write;
+   reg  [4*(CTW+MTW+PTW)-1:0]          push_read_data;
+   wire [4*(CTW+MTW+PTW)-1:0]          push_write_data;
+   wire [$clog2(LEVEL)-1:0]              push_read_level;
+   wire [$clog2(LEVEL)-1:0]              push_write_level;
+   wire [ADW-1:0]                      push_read_addr;
+   wire [ADW-1:0]                      push_write_addr;
+
+
+   wire                                pop_ready;
+
+   wire [1:0]                          pop_rpu_read;
+   wire [1:0]                          pop_rpu_write;
+   reg  [4*(CTW+MTW+PTW)-1:0]          pop_read_data [0:1];
+   wire [4*(CTW+MTW+PTW)-1:0]          pop_write_data [0:1];
+   wire [$clog2(LEVEL)-1:0]              pop_read_level [0:1];
+   wire [$clog2(LEVEL)-1:0]              pop_write_level [0:1];
+   wire [ADW-1:0]                      pop_read_addr [0:1];
+   wire [ADW-1:0]                      pop_write_addr [0:1];
+ 
    
    wire [LEVEL-1:0]                    we;
    wire [addr_idx_high(LEVEL):0]       waddr;
@@ -138,71 +148,71 @@ endfunction
    wire [4*(CTW+MTW+PTW)-1:0]          rdata        [0:LEVEL-1];   
 
 
-   wire [ADW-1:0]                      read_addr    [0:LEVEL-1];
-   wire [ADW-1:0]                      write_addr   [0:LEVEL-1];
-   
-   
-   wire [ADW-1:0]                      my_addr      [0:LEVEL-1];
-   wire [ADW-1:0]                      child_addr   [0:LEVEL-1];
 
 //-----------------------------------------------------------------------------
 // Instantiations
 //-----------------------------------------------------------------------------
 genvar i,j;
 generate
-   for (i=0;i<LEVEL;i=i+1) begin : pifo_loop
-         PIFO_SRAM #(
+         PUSH_RPU #(
             .PTW (PTW),
             .MTW (MTW),
             .CTW (CTW),
-            .ADW (ADW)
-         ) u_PIFO (
-            .i_clk           ( i_clk                        ),
-            .i_arst_n        ( i_arst_n                     ),
+            .ADW (ADW),
+            .LEVEL (LEVEL)
+         ) u_PUSH_RPU (
+            .i_clk           ( i_clk            ),
+            .i_arst_n        ( i_arst_n         ),
 
-            .i_push          ( push_up      [i] ),
-            .i_push_data     ( push_data_up [i] ),
-            .i_pop           ( pop_up       [i] ),
-            .o_pop_data      ( pop_data_up  [i] ),
+            .ready           ( push_ready       ),
 
-            .o_push          ( push_dn      [i] ),
-            .o_push_data     ( push_data_dn [i] ),
-            .o_pop           ( pop_dn       [i] ),
-            .i_pop_data      ( pop_data_dn  [i] ),
+            .i_push          ( i_push           ),
+            .i_push_data     ( i_push_data      ),
 			
-            .o_read          ( read         [i] ), 
-            .i_read_data     ( read_data    [i] ), 
+            .o_read          ( push_rpu_read    ), 
+            .i_read_data     ( push_read_data   ), 
    
-            .o_write         ( write        [i] ), 
-            .o_write_data    ( write_data   [i] ),
+            .o_write         ( push_rpu_write   ), 
+            .o_write_data    ( push_write_data ),
 
-            .i_my_addr       ( my_addr      [i] ),
-            .o_child_addr    ( child_addr   [i] ),
-            .o_read_addr     ( read_addr    [i] ),
-            .o_write_addr    ( write_addr    [i] )		
+            .o_read_level    ( push_read_level  ),
+            .o_write_level   ( push_write_level ),
+            .o_read_addr     ( push_read_addr   ),
+            .o_write_addr    ( push_write_addr  )		
          );
-   end
-   
-   assign push_up[0]            = i_push;
-   assign push_data_up[0]       = i_push_data;
-   assign pop_up[0]             = i_pop;
-   assign o_pop_data            = pop_data_up[0];
-   assign my_addr[0]            = 1'b0;
 
-   for (i=1;i<LEVEL;i=i+1) begin : loop1
-      assign push_up[i]            = push_dn[i-1];
-      assign push_data_up[i]       = push_data_dn[i-1];
-      assign pop_up[i]             = pop_dn[i-1];
-      assign pop_data_dn[i-1]      = pop_data_up[i];
-      assign my_addr[i]            = child_addr[i - 1];
-   end   
-   assign pop_data_dn[LEVEL - 1] = {(MTW+PTW){1'b1}};
+         POP_RPU_PAIR #(
+            .PTW (PTW),
+            .MTW (MTW),
+            .CTW (CTW),
+            .ADW (ADW),
+            .LEVEL (LEVEL)
+         ) u_POP_RPU_PAIR (
+            .i_clk           ( i_clk            ),
+            .i_arst_n        ( i_arst_n         ),
+
+            .ready           ( pop_ready        ),
+
+            .i_pop           ( i_pop            ),
+            .o_pop_data      ( o_pop_data       ),
+			
+            .o_read          ( pop_rpu_read     ), 
+            .i_read_data     ( pop_read_data    ), 
+   
+            .o_write         ( pop_rpu_write    ), 
+            .o_write_data    ( pop_write_data   ),
+
+            .o_read_level    ( pop_read_level   ),
+            .o_write_level   ( pop_write_level  ),
+            .o_read_addr     ( pop_read_addr    ),
+            .o_write_addr    ( pop_write_addr   )		
+         );
    
 
    for (i=1; i<LEVEL; i=i+1) begin : sram_inst
       INFER_SDPRAM #( 
 	      .DATA_WIDTH ( 4 * (CTW + MTW + PTW)              ), 
-         .ADDR_WIDTH ( 2 * i                           ), 
+         .ADDR_WIDTH ( 2 * i                              ), 
          .ARCH       ( 0                                  ), 
          .RDW_MODE   ( 1                                  ),
          .INIT_VALUE ( {4{{CTW{1'b0}},{(MTW+PTW){1'b1}}}} ) // Sub-tree size is zero. Pifo value are maximum initially.		 
@@ -220,17 +230,12 @@ generate
          .o_rdata    ( rdata[i]                                ) 
       );  
 
-      assign re[i]    = read[i];
-      assign we[i]    = write[i];
-      assign waddr[addr_idx_high(i+1):addr_idx_low(i+1)] = write_addr[i];
-      assign raddr[addr_idx_high(i+1):addr_idx_low(i+1)] = read_addr[i];	       
-      assign wdata[i] = write_data[i];
    end     
    
     
      INFER_SDPRAM #( 
-	     .DATA_WIDTH ( 4 * (CTW + MTW + PTW)              ), 
-         .ADDR_WIDTH ( 1                          ), 
+	      .DATA_WIDTH ( 4 * (CTW + MTW + PTW)              ), 
+         .ADDR_WIDTH ( 1                                  ), 
          .ARCH       ( 0                                  ), 
          .RDW_MODE   ( 1                                  ),
          .INIT_VALUE ( {4{{CTW{1'b0}},{(MTW+PTW){1'b1}}}} ) // Sub-tree size is zero. Pifo value are maximum initially.		 
@@ -246,23 +251,35 @@ generate
          .i_re       ( re[0]                                   ),                                        
          .i_raddr    ( raddr[addr_idx_high(1):addr_idx_low(1)] ),    
          .o_rdata    ( rdata[0]                                ) 
-      );  
-
-      assign re[0]    = read[0];
-      assign we[0]    = write[0];
-      assign waddr[addr_idx_high(1):addr_idx_low(1)] = write_addr[0];
-      assign raddr[addr_idx_high(1):addr_idx_low(1)] = read_addr[0];	       
-      assign wdata[0] = write_data[0];
-
-   
+      );   
    
    
    for (i=0;i<LEVEL;i=i+1) begin : loop
-         assign read_data[i] = rdata[i];
+      assign re[i]    = (pop_rpu_read[0] & i == pop_read_level[0]) ? 1'b1 :
+                        (pop_rpu_read[1] & i == pop_read_level[1]) ? 1'b1 :
+                        (push_rpu_read   & i == push_read_level  ) ? 1'b1 : '0;
+      assign we[i]    = (pop_rpu_write[0] & i == pop_write_level[0]) ? 1'b1 :
+                        (pop_rpu_write[1] & i == pop_write_level[1]) ? 1'b1 :
+                        (push_rpu_write   & i == push_write_level  ) ? 1'b1 : '0;
+
+
+      assign waddr[addr_idx_high(i+1):addr_idx_low(i+1)] 
+      = (pop_rpu_write[0] & i == pop_write_level[0]) ? pop_write_addr[0] :
+        (pop_rpu_write[1] & i == pop_write_level[1]) ? pop_write_addr[1] :
+        (push_rpu_write   & i == push_write_level  ) ? push_write_addr   : '0;
+
+      assign raddr[addr_idx_high(i+1):addr_idx_low(i+1)] 
+      = (pop_rpu_read[0] & i == pop_read_level[0]) ? pop_read_addr[0] :
+        (pop_rpu_read[1] & i == pop_read_level[1]) ? pop_read_addr[1] :
+        (push_rpu_read   & i == push_read_level  ) ? push_read_addr   : '0;      
+
+
+      assign wdata[i] = (pop_rpu_write[0] & i == pop_write_level[0]) ? pop_write_data[0] :
+                        (pop_rpu_write[1] & i == pop_write_level[1]) ? pop_write_data[1] :
+                        (push_rpu_write   & i == push_write_level  ) ? push_write_data   : 
+                        {4{{CTW{1'b0}},{(MTW+PTW){1'b1}}}};
+
    end
-
-
-
 
 endgenerate
 
@@ -273,6 +290,10 @@ endgenerate
 //-----------------------------------------------------------------------------
 // Combinatorial Logic / Continuous Assignments
 //-----------------------------------------------------------------------------
+
+   assign pop_read_data[0] = rdata[pop_write_level[0]];
+   assign pop_read_data[1] = rdata[pop_write_level[1]];
+   assign push_read_data   = rdata[push_write_level];
 
 //-----------------------------------------------------------------------------
 // Output Assignments

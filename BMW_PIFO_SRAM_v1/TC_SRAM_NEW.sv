@@ -38,24 +38,25 @@ integer        seed;
 integer        R;
 reg            push;
 reg            pop;
-reg [9:0]      push_data;
+reg [7:0]      push_data;
 integer        data_gen [49:0];
 integer        i;
-reg [9:0]      pop_data;
+wire [7:0]      pop_data;
 //-----------------------------------------------------------------------------
 // Instantiations
 //-----------------------------------------------------------------------------
 PIFO_SRAM_TOP 
 #(
-   .PTW   (10),
+   .PTW   (8),
    .MTW   (0),
+   .CTW   (8),
    .LEVEL (4)
 ) u_PIFO_TOP (
    .i_clk       ( clk            ),
    .i_arst_n    ( arst_n         ),
    
    .i_push      ( push           ),
-   .i_push_data ( push_data[9:0] ),
+   .i_push_data ( push_data[7:0] ),
    
    .i_pop       ( pop            ),
    .o_pop_data  ( pop_data       )      
@@ -69,9 +70,15 @@ always #4 begin clk = ~clk; end
 //-----------------------------------------------------------------------------
 // Initial
 //-----------------------------------------------------------------------------  
+
+initial begin            
+   $dumpfile("wave.vcd"); // 指定用作dumpfile的文件
+   $dumpvars; // dump all vars
+end
+
 initial begin
     for (i=0;i<50;i=i+1) begin
-      data_gen[i] = $dist_uniform(seed,0,1023);
+      data_gen[i] = $dist_uniform(seed,0,256);
     end
 end
 
@@ -89,7 +96,7 @@ begin
      @ (posedge clk);
        fork 
           push           = 1'b1;
-          push_data[9:0] = data_gen[i] - 1;
+          push_data[7:0] = data_gen[i] - 1;
        join
     end   
 
@@ -97,7 +104,7 @@ begin
     @ (posedge clk);
     fork 
       push           = 1'b0;
-      push_data[9:0] = 'd0;
+      push_data[7:0] = 'd0;
     join
 
    @ (posedge clk);

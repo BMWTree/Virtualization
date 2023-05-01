@@ -28,6 +28,7 @@ module POP_RPU
    input                          i_clk,         // I - Clock
    input                          i_arst_n,      // I - Active Low Async Reset
 
+   input                          i_done_before, // I - pop done
    output[1:0]                    o_fsm,         // O - fsm state
   
    // From/To Parent    
@@ -80,7 +81,6 @@ localparam    ST_IDLE     = 2'b00,
    reg                   pop;
    reg [(MTW+PTW)-1:0]         pop_data;   
 	  
-   reg [1:0]             min_sub_tree;
    reg [1:0]             min_data_port;
 
 	//for parent/child node
@@ -109,7 +109,6 @@ always @ (posedge i_clk or negedge i_arst_n)
    begin
       if (!i_arst_n) begin
          fsm     <= ST_IDLE;
-         push_data <= 'd0;	
 		   my_addr      <= 'd0;
 
       end else begin
@@ -124,8 +123,13 @@ always @ (posedge i_clk or negedge i_arst_n)
                 end
             end  
             ST_POP: begin
-               my_addr      <= my_addr;
-               fsm          <= ST_WB;
+               if (i_done_before) begin
+                  my_addr      <= '0;
+                  fsm          <= ST_IDLE;
+               end else begin
+                  my_addr      <= my_addr;
+                  fsm          <= ST_WB;
+               end
             end		  
             ST_WB: begin
                   if (i_pop) begin
@@ -203,23 +207,6 @@ always @ *
    
 always @ *
    begin
-      // Find the minimum sub-tree. 
-      if (i_read_data[(CTW+MTW+PTW)-1:(MTW+PTW)] <= i_read_data[2*(CTW+MTW+PTW)-1:2*(MTW+PTW)+CTW] &&
-	      i_read_data[(CTW+MTW+PTW)-1:(MTW+PTW)] <= i_read_data[3*(CTW+MTW+PTW)-1:3*(MTW+PTW)+2*CTW] &&
-		  i_read_data[(CTW+MTW+PTW)-1:(MTW+PTW)] <= i_read_data[4*(CTW+MTW+PTW)-1:4*(MTW+PTW)+3*CTW]) begin
-	     min_sub_tree[1:0] = 2'b00;	  
-      end else if (i_read_data[2*(CTW+MTW+PTW)-1:2*(MTW+PTW)+CTW] <= i_read_data[(CTW+MTW+PTW)-1:(MTW+PTW)] &&
-	      i_read_data[2*(CTW+MTW+PTW)-1:2*(MTW+PTW)+CTW] <= i_read_data[3*(CTW+MTW+PTW)-1:3*(MTW+PTW)+2*CTW] &&
-		  i_read_data[2*(CTW+MTW+PTW)-1:2*(MTW+PTW)+CTW] <= i_read_data[4*(CTW+MTW+PTW)-1:4*(MTW+PTW)+3*CTW]) begin
-	     min_sub_tree[1:0] = 2'b01;	  
-      end else if (i_read_data[3*(CTW+MTW+PTW)-1:3*(MTW+PTW)+2*CTW] <= i_read_data[(CTW+MTW+PTW)-1:(MTW+PTW)] &&
-	      i_read_data[3*(CTW+MTW+PTW)-1:3*(MTW+PTW)+2*CTW] <= i_read_data[2*(CTW+MTW+PTW)-1:2*(MTW+PTW)+CTW] &&
-		  i_read_data[3*(CTW+MTW+PTW)-1:3*(MTW+PTW)+2*CTW] <= i_read_data[4*(CTW+MTW+PTW)-1:4*(MTW+PTW)+3*CTW]) begin
-	     min_sub_tree[1:0] = 2'b10;
-      end else begin
-	     min_sub_tree[1:0] = 2'b11;
-      end		 
-	  
       // Find the minimum data and minimum data port.
       if (i_read_data[PTW-1:0] <= i_read_data[2*PTW+(CTW+MTW)-1:(CTW+MTW+PTW)] &&
 	      i_read_data[PTW-1:0] <= i_read_data[3*PTW+2*(CTW+MTW)-1:2*(CTW+MTW+PTW)] &&

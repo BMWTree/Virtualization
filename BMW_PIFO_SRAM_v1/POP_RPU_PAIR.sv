@@ -43,6 +43,7 @@ localparam    ST_IDLE     = 2'b00,
 // Register and Wire Declarations
 //-----------------------------------------------------------------------------
 
+    wire [1:0]                          done_before;
     wire [1:0]                          pop_up;
     wire [(MTW+PTW)-1:0]                pop_data_up  [0:1];
     wire                                pop_dn       [0:1];
@@ -86,7 +87,7 @@ always @ (posedge i_clk or negedge i_arst_n)
                cur_level[0] <= '0;
             end  
             ST_POP: begin
-               cur_level[0] <= cur_level[0];
+               cur_level[0] <= done_before[0] ? '0 : cur_level[0];
             end		  
             ST_WB: begin
                   if (cur_level[0] < LEVEL-2) begin
@@ -105,24 +106,24 @@ always @ (posedge i_clk or negedge i_arst_n)
 always @ (posedge i_clk or negedge i_arst_n)
    begin
       if (!i_arst_n) begin
-         cur_level[1] <= {{($clog2(LEVEL)-1){1'b0}}, 1'b1};
+         cur_level[1] <= {{($clog2(LEVEL)-2){1'b0}}, 1'b1};
       end else begin
 	     case (fsm[1])
             ST_IDLE: begin
-               cur_level[1] <= {{($clog2(LEVEL)-1){1'b0}}, 1'b1};
+               cur_level[1] <= {{($clog2(LEVEL)-2){1'b0}}, 1'b1};
             end  
             ST_POP: begin
-               cur_level[1] <= cur_level[1];
+               cur_level[1] <= done_before[1] ? {{($clog2(LEVEL)-2){1'b0}}, 1'b1} : cur_level[1];
             end		  
             ST_WB: begin
                   if (cur_level[1] < LEVEL-2) begin
                         cur_level[1] <= cur_level[1]+2;
                   end else begin
-                        cur_level[1] <= {{($clog2(LEVEL)-1){1'b0}}, 1'b1};
+                        cur_level[1] <= {{($clog2(LEVEL)-2){1'b0}}, 1'b1};
                   end
             end
             default: begin // you should not hit here
-               cur_level[1] <= {{($clog2(LEVEL)-1){1'b0}}, 1'b1};
+               cur_level[1] <= {{($clog2(LEVEL)-2){1'b0}}, 1'b1};
             end	
  	     endcase
       end	  
@@ -137,6 +138,7 @@ always @ (posedge i_clk or negedge i_arst_n)
     ) u_POP_RPU_0 (
         .i_clk           ( i_clk            ),
         .i_arst_n        ( i_arst_n         ),
+        .i_done_before   ( done_before[0]   ),
         .o_fsm           ( fsm[0]           ),
         .i_pop           ( pop_up       [0] ),
         .o_pop_data      ( pop_data_up  [0] ),
@@ -160,9 +162,13 @@ always @ (posedge i_clk or negedge i_arst_n)
     assign my_addr[1]            = child_addr[0];
 
     
-    assign my_addr[0]            = (cur_level[1] < LEVEL-2) ? child_addr[1] : '0;
-    assign pop_up[0]             = (cur_level[1] < LEVEL-2) ? pop_dn[1] : i_pop;
-    assign pop_data_dn[1]        = (cur_level[1] < LEVEL-2) ? pop_data_up[0] : {(MTW+PTW){1'b1}};
+    assign my_addr[0]            = (fsm[0] == ST_IDLE) ? '0 :
+                                   (cur_level[1] < LEVEL-2) ? child_addr[1] : '0;
+    assign pop_up[0]             = (fsm[0] == ST_IDLE) ? i_pop :
+                                   (cur_level[1] < LEVEL-2) ? pop_dn[1] : i_pop;
+
+    assign pop_data_dn[1]        = (fsm[0] == ST_IDLE) ? {(MTW+PTW){1'b1}} :
+                                   (cur_level[1] < LEVEL-2) ? pop_data_up[0] : {(MTW+PTW){1'b1}};
 
     POP_RPU #(
         .PTW (PTW),
@@ -172,6 +178,7 @@ always @ (posedge i_clk or negedge i_arst_n)
     ) u_POP_RPU_1 (
         .i_clk           ( i_clk            ),
         .i_arst_n        ( i_arst_n         ),
+        .i_done_before   ( done_before[1]   ),
         .o_fsm           ( fsm[1]           ),
         .i_pop           ( pop_up       [1] ),
         .o_pop_data      ( pop_data_up  [1] ),
@@ -196,27 +203,36 @@ always @ (posedge i_clk or negedge i_arst_n)
 //-----------------------------------------------------------------------------
 
    assign read_data = i_read_data;
+   assign done_before[0] = (~(|i_read_data[0][(CTW+MTW+PTW)-1:(MTW+PTW)])) // if all sub tree count is 0, pop done
+                         & (~(|i_read_data[0][2*(CTW+MTW+PTW)-1:2*(MTW+PTW)+CTW]))
+                         & (~(|i_read_data[0][3*(CTW+MTW+PTW)-1:3*(MTW+PTW)+2*CTW]))
+                         & (~(|i_read_data[0][4*(CTW+MTW+PTW)-1:4*(MTW+PTW)+3*CTW]));
+   assign done_before[1] = (~(|i_read_data[1][(CTW+MTW+PTW)-1:(MTW+PTW)])) // if all sub tree count is 0, pop done
+                         & (~(|i_read_data[1][2*(CTW+MTW+PTW)-1:2*(MTW+PTW)+CTW]))
+                         & (~(|i_read_data[1][3*(CTW+MTW+PTW)-1:3*(MTW+PTW)+2*CTW]))
+                         & (~(|i_read_data[1][4*(CTW+MTW+PTW)-1:4*(MTW+PTW)+3*CTW]));
 
 //-----------------------------------------------------------------------------
 // Output Assignments
 //-----------------------------------------------------------------------------
-    assign ready = (fsm[0] == ST_IDLE);
-    assign o_pop_data = pop_data_up  [0];
+    assign ready = ((fsm[0] == ST_IDLE) & (~i_pop)) 
+                 | (cur_level[0] >= LEVEL-2 & fsm[0] == ST_WB) 
+                 | done_before[0];
+    assign o_pop_data = pop_data_up[0];
     assign o_read = read;
     assign o_write = write;
     assign o_write_data = write_data;
 
     assign o_read_level[0] = (fsm[0] == ST_IDLE) ? '0
-                           : (fsm[0] == ST_POP) ? cur_level[0]
+                           : (fsm[0] == ST_POP) ? (done_before[0] ? '0 : cur_level[0])
                            // ST_WB
-                           : (cur_level[0] < LEVEL-2) ? cur_level[0]+2
-                           : '0;
+                           : (cur_level[0] < LEVEL-2) ? cur_level[0]+2 : '0;
 
-    assign o_read_level[1] = (fsm[1] == ST_IDLE) ? {{($clog2(LEVEL)-1){1'b0}}, 1'b1};
-                           : (fsm[1] == ST_POP) ? cur_level[1]
+    assign o_read_level[1] = (fsm[1] == ST_IDLE) ? {{($clog2(LEVEL)-2){1'b0}}, 1'b1}
+                           : (fsm[1] == ST_POP) ? (done_before[1] ? {{($clog2(LEVEL)-2){1'b0}}, 1'b1} : cur_level[1])
                            // ST_WB
                            : (cur_level[1] < LEVEL-2) ? cur_level[1]+2
-                           : {{($clog2(LEVEL)-1){1'b0}}, 1'b1};
+                           : {{($clog2(LEVEL)-2){1'b0}}, 1'b1};
     
     assign o_write_level = cur_level;
     assign o_read_addr = read_addr;
