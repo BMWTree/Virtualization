@@ -92,12 +92,13 @@ begin
    #400;
    arst_n = 1'b1;
    for (i=0; i<24; i=i+1) begin
-     @ (posedge clk);
-       fork 
-          push           = 1'b1;
-          push_data[9:0] = data_gen[i] - 1;
-       join
-    end   
+      @ (posedge clk);
+         push_data[9:0] = data_gen[i] - 1;
+         push           = 1'b1;
+      @ (posedge clk);
+         push_data[9:0] = '0;
+         push           = 1'b0;
+   end   
 
 
    @ (posedge clk);
@@ -105,6 +106,12 @@ begin
      push           = 1'b0;
      push_data[9:0] = 'd0;
    join
+   @ (posedge clk);
+   fork 
+     push           = 1'b0;
+     push_data[9:0] = 'd0;
+   join
+
 
    @ (posedge clk);
    for (i=0; i<24; i=i+1) begin
@@ -116,10 +123,10 @@ begin
       push_data[9:0] = 'd0;
       pop = 1'b0;    
       @ (posedge clk);
-      push = 1'b1;
-      push_data[9:0] = {{9{1'b0}}, 1'b1};
-      pop = 1'b0; 
-      @ (posedge clk);
+      // push = 1'b1;
+      // push_data[9:0] = {{9{1'b0}}, 1'b1};
+      // pop = 1'b0; 
+      // @ (posedge clk);
    end   
   
    #1000;   
