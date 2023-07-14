@@ -96,6 +96,13 @@ localparam    ST_IDLE     = 2'b00,
 	//for parent/child node
    reg [ADW-1:0]         my_addr;
    reg [ADW-1:0]         child_addr;
+
+
+
+   reg [ADW-1:0]         my_next_addr;
+   reg                   next_push;
+
+
    
    
 
@@ -143,15 +150,18 @@ localparam    ST_IDLE     = 2'b00,
 					my_addr      <= i_my_addr; 
 				  end
 			   endcase
+
+			   	my_next_addr <= 'd0;
+				next_push    <= 1'd0;
             end
 
             ST_PUSH: begin       	
                case ({i_push, i_pop})
                   2'b00,
 				  2'b11: begin 
-                     fsm[1:0]    <= ST_IDLE;
-                     ipushd_latch <= 'd0;	
-					 my_addr      <= 'd0; 
+                    fsm[1:0]    <= ST_IDLE;
+                    ipushd_latch <= 'd0;	
+					my_addr      <= 'd0; 
 				  end
                   2'b01: begin
                     fsm[1:0]    <= ST_POP;
@@ -164,33 +174,54 @@ localparam    ST_IDLE     = 2'b00,
 					my_addr      <= i_my_addr;			 
 				  end
 			   endcase   
+			   	my_next_addr <= 'd0;
+				next_push    <= 1'd0;
 			end   
 
-            ST_POP: begin
-               ipushd_latch <= ipushd_latch;		
+            ST_POP: begin	
 			   my_addr      <= my_addr;
   		       fsm[1:0]     <= ST_WB;
+
+				if (i_push) begin
+					my_next_addr <= i_my_addr;
+					ipushd_latch <= i_push_data;	
+					next_push    <= 1'd1;
+				end else begin
+                    my_next_addr <= 'd0;
+					ipushd_latch <= 'd0;	
+					next_push    <= 1'd0;
+                end		               			
             end		
             
 			ST_WB: begin		       
-  		       	case ({i_push, i_pop})
-                  2'b00,
-				  2'b11: begin 
-                     fsm[1:0]    <= ST_IDLE;
-                     ipushd_latch <= 'd0;		
-					 my_addr      <= 'd0; 
+  		       	case ({i_push, i_pop, next_push})
+                  3'b000,
+				  3'b011,
+				  3'b101,
+				  3'b110,
+				  3'b111: begin 
+                    fsm[1:0]    <= ST_IDLE;
+                    ipushd_latch <= 'd0;		
+					my_addr      <= 'd0; 
 				  end
-                  2'b01: begin
+                  3'b010: begin
                     fsm[1:0]    <= ST_POP;
                     ipushd_latch <= 'd0;	
 					my_addr      <= i_my_addr;		 
 				  end
-				  2'b10: begin 
-                    fsm[1:0]    <= ST_PUSH;
+				  3'b001: begin 
+                    fsm[1:0]     <= ST_PUSH;
+                    ipushd_latch <= ipushd_latch;	
+					my_addr      <= my_next_addr; 
+				  end
+				  3'b100: begin 
+                    fsm[1:0]     <= ST_PUSH;
                     ipushd_latch <= i_push_data;	
 					my_addr      <= i_my_addr; 
 				  end
-			   endcase
+			    endcase
+				my_next_addr <= 'd0;
+				next_push    <= 1'd0;
 			end			
  	     endcase
       end	  

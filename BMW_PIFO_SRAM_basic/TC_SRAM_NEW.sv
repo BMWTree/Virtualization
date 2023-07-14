@@ -103,8 +103,13 @@ begin
    @ (posedge clk);
    for (i=0; i<24; i=i+1) begin
       pop = 1'b1;
+      push = 1'b0;
       @ (posedge clk);
       pop = 1'b0;    
+      @ (posedge clk);
+      
+      push           = 1'b1;
+      push_data[9:0] = data_gen[49-i];
       @ (posedge clk);
    end   
   
