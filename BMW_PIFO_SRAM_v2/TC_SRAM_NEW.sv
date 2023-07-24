@@ -46,6 +46,7 @@ reg [1:0]      tree_id [0:LEVEL-1];
 integer        data_gen [49:0];
 integer        i;
 wire [7:0]      pop_data [0:LEVEL-1];
+wire [LEVEL-1:0] task_fifo_full;
 
 reg [7:0]      push_data_0;
 reg [7:0]      push_data_1;
@@ -75,7 +76,8 @@ PIFO_SRAM_TOP
    .i_push_data ( push_data      ),
    
    .i_pop       ( pop            ),
-   .o_pop_data  ( pop_data       )      
+   .o_pop_data  ( pop_data       ),
+   .o_task_fifo_full (task_fifo_full)      
 );
 
 //-----------------------------------------------------------------------------
@@ -122,31 +124,55 @@ begin
  
    #400;
    arst_n = 1'b1;
-   for (i=0; i<4; i=i+1) begin
+   for (i=0; i<8; i=i+1) begin
      @ (posedge clk);
       fork 
         for (integer j = 0; j < LEVEL; j++) begin
+          if(!task_fifo_full[j]) begin // push
             push[j] = 1'b1;
             push_data[j] = i+1+(16*j);
             tree_id[j] = j;
             pop[j] = 1'b0;
+          end else begin
+            pop[j] = 1'b0;
+            push[j] = 1'b0;
+            push_data[j] = 0;
+            tree_id[j] = j;
+          end
         end
           
       join
-    end   
-
-    for (i=0; i<4; i=i+1) begin
-     @ (posedge clk);
+      @ (posedge clk);
       fork 
         for (integer j = 0; j < LEVEL; j++) begin
+          if(!task_fifo_full[j]) begin // pop
             pop[j] = 1'b1;
             push[j] = 1'b0;
             push_data[j] = 0;
             tree_id[j] = j;
+          end else begin
+            pop[j] = 1'b0;
+            push[j] = 1'b0;
+            push_data[j] = 0;
+            tree_id[j] = j;
+          end
         end
           
       join
     end
+
+    // for (i=0; i<4; i=i+1) begin
+    //  @ (posedge clk);
+    //   fork 
+    //     for (integer j = 0; j < LEVEL; j++) begin
+    //         pop[j] = 1'b1;
+    //         push[j] = 1'b0;
+    //         push_data[j] = 0;
+    //         tree_id[j] = j;
+    //     end
+          
+    //   join
+    // end
 
    @ (posedge clk);
    fork 

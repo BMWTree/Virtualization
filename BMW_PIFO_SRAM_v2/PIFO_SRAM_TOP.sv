@@ -43,11 +43,13 @@ module PIFO_SRAM_TOP
    
    // Push and Pop port to the whole PIFO tree
    input [TREE_NUM_BITS-1:0]        i_tree_id [0:LEVEL-1],
-   input [0:LEVEL-1]                i_push,
+   input [LEVEL-1:0]                i_push,
    input [(MTW+PTW)-1:0]            i_push_data [0:LEVEL-1],
    
-   input [0:LEVEL-1]                i_pop,
-   output [(MTW+PTW)-1:0]           o_pop_data [0:LEVEL-1]
+   input [LEVEL-1:0]                i_pop,
+   output [(MTW+PTW)-1:0]           o_pop_data [0:LEVEL-1],
+
+   output [LEVEL-1:0]               o_task_fifo_full
 );
 //-----------------------------------------------------------------------------
 // Include Files
@@ -222,6 +224,7 @@ generate
    
    for (i=0;i<LEVEL;i=i+1) begin
       assign o_pop_data[i] = pop_data_up[i];
+      assign o_task_fifo_full[i] = TaskFIFO_full[i];
    end
 
 
