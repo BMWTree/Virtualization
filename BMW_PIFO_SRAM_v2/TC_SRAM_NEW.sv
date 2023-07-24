@@ -31,18 +31,32 @@ module TC();
 //-----------------------------------------------------------------------------
 // Register and Wire Declarations
 //-----------------------------------------------------------------------------
+
+parameter LEVEL = 4;
+
 reg            clk;
 reg            arst_n;
 
 integer        seed;
 integer        R;
-reg            push;
-reg            pop;
-reg [7:0]      push_data;
-reg [1:0]      tree_id;
+reg [LEVEL-1:0] push;
+reg [LEVEL-1:0] pop;
+reg [7:0]      push_data [0:LEVEL-1];
+reg [1:0]      tree_id [0:LEVEL-1];
 integer        data_gen [49:0];
 integer        i;
-wire [7:0]      pop_data;
+wire [7:0]      pop_data [0:LEVEL-1];
+
+reg [7:0]      push_data_0;
+reg [7:0]      push_data_1;
+reg [7:0]      push_data_2;
+reg [7:0]      push_data_3;
+
+reg [7:0]      pop_data_0;
+reg [7:0]      pop_data_1;
+reg [7:0]      pop_data_2;
+reg [7:0]      pop_data_3;
+
 //-----------------------------------------------------------------------------
 // Instantiations
 //-----------------------------------------------------------------------------
@@ -58,7 +72,7 @@ PIFO_SRAM_TOP
    
    .i_tree_id   ( tree_id        ),
    .i_push      ( push           ),
-   .i_push_data ( push_data[7:0] ),
+   .i_push_data ( push_data      ),
    
    .i_pop       ( pop            ),
    .o_pop_data  ( pop_data       )      
@@ -68,6 +82,16 @@ PIFO_SRAM_TOP
 // Clocks
 //-----------------------------------------------------------------------------
 always #4 begin clk = ~clk; end
+
+assign push_data_0 = push_data[0];
+assign push_data_1 = push_data[1];
+assign push_data_2 = push_data[2];
+assign push_data_3 = push_data[3];
+
+assign pop_data_0 = pop_data[0];
+assign pop_data_1 = pop_data[1];
+assign pop_data_2 = pop_data[2];
+assign pop_data_3 = pop_data[3];
   
 //-----------------------------------------------------------------------------
 // Initial
@@ -86,67 +110,89 @@ end
 
 initial
 begin
-   clk    = 1'b0;
-   arst_n = 1'b0;    
-   seed   = 1;
-   push   = 1'b0;
-   pop    = 1'b0;
-   tree_id = '0;
+  clk    = 1'b0;
+  arst_n = 1'b0;    
+  seed   = 1;
+  push   = 1'b0;
+  pop    = 1'b0;
+
+  for (integer j = 0; j < LEVEL; j++) begin
+    tree_id[j] = '0;
+  end
  
    #400;
    arst_n = 1'b1;
-   for (i=0; i<24; i=i+1) begin
+   for (i=0; i<4; i=i+1) begin
      @ (posedge clk);
-       fork 
-          push           = 1'b1;
-          push_data[7:0] = data_gen[i] - 1;
-          tree_id = (2*i) % 4;
-       join
+      fork 
+        for (integer j = 0; j < LEVEL; j++) begin
+            push[j] = 1'b1;
+            push_data[j] = i+1+(16*j);
+            tree_id[j] = j;
+            pop[j] = 1'b0;
+        end
+          
+      join
     end   
 
+    for (i=0; i<4; i=i+1) begin
+     @ (posedge clk);
+      fork 
+        for (integer j = 0; j < LEVEL; j++) begin
+            pop[j] = 1'b1;
+            push[j] = 1'b0;
+            push_data[j] = 0;
+            tree_id[j] = j;
+        end
+          
+      join
+    end
 
    @ (posedge clk);
    fork 
-     push           = 1'b0;
-     push_data[7:0] = 'd0;
-     tree_id = '0;
+     for (integer j = 0; j < LEVEL; j++) begin
+            pop[j] = 1'b0;
+            push[j] = 1'b0;
+            push_data[j] = 0;
+            tree_id[j] = j;
+        end
    join
-   @ (posedge clk);
-   fork 
-     push           = 1'b0;
-     push_data[7:0] = 'd0;
-     tree_id = '0;
-   join
-   @ (posedge clk);
-   fork 
-     push           = 1'b0;
-     push_data[7:0] = 'd0;
-     tree_id = '0;
-   join
-   @ (posedge clk);
-   fork 
-     push           = 1'b0;
-     push_data[7:0] = 'd0;
-     tree_id = '0;
-   join
-   @ (posedge clk);
-   fork 
-     push           = 1'b0;
-     push_data[7:0] = 'd0;
-     tree_id = '0;
-   join
+  //  @ (posedge clk);
+  //  fork 
+  //    push           = 1'b0;
+  //    push_data[7:0] = 'd0;
+  //    tree_id = '0;
+  //  join
+  //  @ (posedge clk);
+  //  fork 
+  //    push           = 1'b0;
+  //    push_data[7:0] = 'd0;
+  //    tree_id = '0;
+  //  join
+  //  @ (posedge clk);
+  //  fork 
+  //    push           = 1'b0;
+  //    push_data[7:0] = 'd0;
+  //    tree_id = '0;
+  //  join
+  //  @ (posedge clk);
+  //  fork 
+  //    push           = 1'b0;
+  //    push_data[7:0] = 'd0;
+  //    tree_id = '0;
+  //  join
 
-   @ (posedge clk);
-   for (i=0; i<24; i=i+1) begin
-      pop = 1'b1;
-      // tree_id = (4*i) % 4; // pop tree 0
-      tree_id = (4*i+2) % 4; // pop tree 2
-      @ (posedge clk);
-      pop = 1'b0;
-      // tree_id = 2'b00; // pop tree 0
-      tree_id = 2'b10; // pop tree 2
-      @ (posedge clk);
-   end   
+  //  @ (posedge clk);
+  //  for (i=0; i<24; i=i+1) begin
+  //     pop = 1'b1;
+  //     // tree_id = (4*i) % 4; // pop tree 0
+  //     tree_id = (4*i+2) % 4; // pop tree 2
+  //     @ (posedge clk);
+  //     pop = 1'b0;
+  //     // tree_id = 2'b00; // pop tree 0
+  //     tree_id = 2'b10; // pop tree 2
+  //     @ (posedge clk);
+  //  end   
   
    #1000;   
    $stop;

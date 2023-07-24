@@ -67,7 +67,9 @@ module PIFO_SRAM
    output [$clog2(LEVEL)-1:0]     o_level,
 
    output [SRAM_ADW-1:0]               o_read_addr,
-   output [SRAM_ADW-1:0]               o_write_addr
+   output [SRAM_ADW-1:0]               o_write_addr,
+
+   output [1:0]                    o_state_nxt
 );
 
 function get_offset(
@@ -97,16 +99,17 @@ endfunction
 //-----------------------------------------------------------------------------
 // Parameters
 //-----------------------------------------------------------------------------
-localparam    ST_IDLE     = 2'b00,
-			  ST_PUSH     = 2'b01,
-              ST_POP      = 2'b11,
-	 	 	  ST_WB       = 2'b10;
+localparam  ST_IDLE     = 2'b00,
+            ST_PUSH     = 2'b01,
+            ST_POP      = 2'b11,
+            ST_WB       = 2'b10;
 
 //-----------------------------------------------------------------------------
 // Register and Wire Declarations
 //-----------------------------------------------------------------------------
    // State Machine
    reg [1:0]             fsm;
+   reg [1:0] state_nxt;
    
    // SRAM Read/Write   
    wire                  read;
@@ -156,9 +159,9 @@ localparam    ST_IDLE     = 2'b00,
       if (!i_arst_n) begin
          fsm[1:0]     <= ST_IDLE;
          ipushd_latch <= 'd0;	
-		 my_addr      <= 'd0;
-		 cur_level <= '0;
-		 cur_tree_id <= '0;
+         my_addr      <= 'd0;
+         cur_level <= '0;
+         cur_tree_id <= '0;
 		 
 
       end else begin
@@ -167,11 +170,11 @@ localparam    ST_IDLE     = 2'b00,
 			   case ({i_push, i_pop})
                   2'b00,
 				  2'b11: begin // Not allow concurrent read and write
-                    fsm[1:0]    <= ST_IDLE;
-                    ipushd_latch <= 'd0;
-					my_addr      <= 'd0;	
-					cur_level <= '0;	 
-					cur_tree_id <= '0;
+                  fsm[1:0]    <= ST_IDLE;
+                  ipushd_latch <= 'd0;
+                  my_addr      <= 'd0;	
+                  cur_level <= '0;	 
+                  cur_tree_id <= '0;
 				  end
                   2'b01: begin // pop
                     fsm[1:0]    <= ST_POP;
@@ -252,6 +255,71 @@ localparam    ST_IDLE     = 2'b00,
 			   endcase
 			end			
  	     endcase
+      end	  
+   end
+
+
+assign o_state_nxt = state_nxt;
+
+   always_comb begin
+      if (!i_arst_n) begin
+         state_nxt = ST_IDLE;
+      end else begin
+	      case (fsm[1:0])
+
+         ST_IDLE: begin
+			case ({i_push, i_pop})
+            2'b00,
+			   2'b11: begin // Not allow concurrent read and write
+               state_nxt = ST_IDLE;
+			  end
+            2'b01: begin // pop
+               state_nxt = ST_POP;	 
+			  end
+			  2'b10: begin // push
+               state_nxt = ST_PUSH;	 
+			  end
+			endcase
+         end
+
+         ST_PUSH: begin       	
+         case ({i_push, i_pop})
+            2'b00,
+			   2'b11: begin 
+               state_nxt = ST_IDLE;
+			   end
+            2'b01: begin
+               state_nxt = ST_POP;	 
+			   end
+			   2'b10: begin 
+               state_nxt = ST_PUSH;	 
+			   end
+			endcase   
+			end
+
+         ST_POP: begin
+            state_nxt = ST_WB;
+         end		
+            
+			ST_WB: begin		       
+  		      case ({i_push, i_pop})
+               2'b00,
+				   2'b11: begin 
+                  state_nxt = ST_IDLE;
+				  end
+               2'b01: begin
+                  state_nxt = ST_POP;	 
+				  end
+				  2'b10: begin 
+                  state_nxt = ST_PUSH;
+				  end
+			   endcase
+         end
+
+         default: begin
+            state_nxt = ST_IDLE;
+         end	
+ 	   endcase
       end	  
    end
    
