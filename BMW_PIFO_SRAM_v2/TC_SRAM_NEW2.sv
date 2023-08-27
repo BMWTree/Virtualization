@@ -152,7 +152,7 @@ begin
       // push 0
       push[0] = 1'b1;
       push_data[0] = i+1;
-      tree_id[0] = 2;
+      tree_id[0] = 0;
       pop[0] = 1'b0;
     join
   end
