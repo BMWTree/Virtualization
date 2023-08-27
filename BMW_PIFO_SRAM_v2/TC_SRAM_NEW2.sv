@@ -146,6 +146,29 @@ begin
     end
   join
 
+  for (i=0; i<5; i=i+1) begin
+    @ (posedge clk);
+    fork
+      // push 0
+      push[0] = 1'b1;
+      push_data[0] = i+1;
+      tree_id[0] = 2;
+      pop[0] = 1'b0;
+    join
+  end
+
+  for (i=0; i<20; i=i+1) begin
+    @ (posedge clk);
+    fork 
+      for (integer j = 0; j < LEVEL; j++) begin
+        pop[j] = 1'b0;
+        push[j] = 1'b0;
+        push_data[j] = 0;
+        tree_id[j] = j;
+      end
+    join
+  end
+
 
    for (i=0; i<3; i=i+1) begin
      @ (posedge clk);
@@ -154,7 +177,7 @@ begin
         for (integer j = 0; j < LEVEL; j++) begin
           if(j == 0)begin
             push[j] = 1'b1;
-            push_data[j] = i+1;
+            push_data[j] = i+6;
             tree_id[j] = j;
             pop[j] = 1'b0;
           end else begin
