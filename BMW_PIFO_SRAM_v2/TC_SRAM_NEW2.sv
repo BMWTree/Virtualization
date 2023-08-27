@@ -124,77 +124,63 @@ begin
  
    #400;
    arst_n = 1'b1;
+
+  for (i=0; i<3; i=i+1) begin
+    @ (posedge clk);
+    fork
+      // push 2
+      push[2] = 1'b1;
+      push_data[2] = i+1;
+      tree_id[2] = 2;
+      pop[2] = 1'b0;
+    join
+  end
+
+  @ (posedge clk);
+  fork 
+    for (integer j = 0; j < LEVEL; j++) begin
+      pop[j] = 1'b0;
+      push[j] = 1'b0;
+      push_data[j] = 0;
+      tree_id[j] = j;
+    end
+  join
+
+
    for (i=0; i<3; i=i+1) begin
      @ (posedge clk);
       fork
-        // push
+        // push 0
         for (integer j = 0; j < LEVEL; j++) begin
-          push[j] = 1'b1;
-          push_data[j] = i+1+(16*j);
-          tree_id[j] = j;
-          pop[j] = 1'b0;
+          if(j == 0)begin
+            push[j] = 1'b1;
+            push_data[j] = i+1;
+            tree_id[j] = j;
+            pop[j] = 1'b0;
+          end else begin
+            pop[j] = 1'b0;
+            push[j] = 1'b0;
+            push_data[j] = 0;
+            tree_id[j] = j;
+          end
         end
+        
       join
       @ (posedge clk);
       fork
-        // pop
+        // pop 2
         for (integer j = 0; j < LEVEL; j++) begin
-          pop[j] = 1'b1;
-          push[j] = 1'b0;
-          push_data[j] = 0;
-          tree_id[j] = j;
-        end
-      join
-    end
-
-    for (i=0; i<20; i=i+1) begin
-      @ (posedge clk);
-      fork
-        // wait
-        for (integer j = 0; j < LEVEL; j++) begin
-          pop[j] = 1'b0;
-          push[j] = 1'b0;
-          push_data[j] = 0;
-          tree_id[j] = j;
-        end
-      join
-    end
-
-    for (i=0; i<3; i=i+1) begin
-      @ (posedge clk);
-      fork
-        // push
-        for (integer j = 0; j < LEVEL; j++) begin
-          push[j] = 1'b1;
-          push_data[j] = i+4+(16*j);
-          tree_id[j] = j;
-          pop[j] = 1'b0;
-        end
-      join
-    end
-
-    for (i=0; i<20; i=i+1) begin
-      @ (posedge clk);
-      fork
-        // wait
-        for (integer j = 0; j < LEVEL; j++) begin
-          pop[j] = 1'b0;
-          push[j] = 1'b0;
-          push_data[j] = 0;
-          tree_id[j] = j;
-        end
-      join
-    end
-
-    for (i=0; i<3; i=i+1) begin
-      @ (posedge clk);
-      fork
-        // pop
-        for (integer j = 0; j < LEVEL; j++) begin
+          if(j == 2)begin
             pop[j] = 1'b1;
             push[j] = 1'b0;
             push_data[j] = 0;
             tree_id[j] = j;
+          end else begin
+            pop[j] = 1'b0;
+            push[j] = 1'b0;
+            push_data[j] = 0;
+            tree_id[j] = j;
+          end
         end
       join
     end
@@ -209,42 +195,6 @@ begin
         tree_id[j] = j;
       end
    join
-  //  @ (posedge clk);
-  //  fork 
-  //    push           = 1'b0;
-  //    push_data[7:0] = 'd0;
-  //    tree_id = '0;
-  //  join
-  //  @ (posedge clk);
-  //  fork 
-  //    push           = 1'b0;
-  //    push_data[7:0] = 'd0;
-  //    tree_id = '0;
-  //  join
-  //  @ (posedge clk);
-  //  fork 
-  //    push           = 1'b0;
-  //    push_data[7:0] = 'd0;
-  //    tree_id = '0;
-  //  join
-  //  @ (posedge clk);
-  //  fork 
-  //    push           = 1'b0;
-  //    push_data[7:0] = 'd0;
-  //    tree_id = '0;
-  //  join
-
-  //  @ (posedge clk);
-  //  for (i=0; i<24; i=i+1) begin
-  //     pop = 1'b1;
-  //     // tree_id = (4*i) % 4; // pop tree 0
-  //     tree_id = (4*i+2) % 4; // pop tree 2
-  //     @ (posedge clk);
-  //     pop = 1'b0;
-  //     // tree_id = 2'b00; // pop tree 0
-  //     tree_id = 2'b10; // pop tree 2
-  //     @ (posedge clk);
-  //  end   
   
    #1000;   
    $stop;

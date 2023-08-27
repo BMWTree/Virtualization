@@ -329,7 +329,6 @@ generate
       .i_TaskFIFO_data(TaskFIFO_pop_data),
       .i_TaskFIFO_empty(TaskFIFO_empty),
 
-      .i_rpu_state_nxt(rpu_state_nxt),
       .o_rpu_push(rpu_push),
       .o_rpu_pop(rpu_pop),
       .o_rpu_treeId(rpu_treeId),
