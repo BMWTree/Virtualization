@@ -28,14 +28,15 @@ module PIFO_SRAM_TOP
    parameter CTW    = 10,       // Counter width
    parameter LEVEL  = 4,         // Sub-tree level
    parameter TREE_NUM = 4,
+   parameter FIFO_SIZE    = 8,
+   parameter FIFO_WIDTH    = $clog2(FIFO_SIZE),
 	parameter LEVEL_BITS = $clog2(LEVEL),
 	parameter LEVEL_MASK ={LEVEL{1'b1}},    // Tree level
 	parameter A_TREE ={LEVEL{1'b1}},
 	parameter TREE_NUM_BITS = $clog2(TREE_NUM),
    parameter SRAM_ADW    = $clog2(TREE_NUM/LEVEL) + LEVEL,       // SRAM_Address width
-   parameter FIFO_SIZE    = 8,       // Payload data width
-   parameter FIFO_WIDTH    = $clog2(FIFO_SIZE),       // Payload data width
-   parameter ADW    = LEVEL-1       // Address width in a level
+   
+   parameter ADW    = LEVEL       // Address width in a level
 )(
    // Clock and Reset
    input                            i_clk,
@@ -102,6 +103,7 @@ endfunction
 
    wire [$clog2(LEVEL)-1:0]              level_up   [0:LEVEL - 1];
    wire [$clog2(LEVEL)-1:0]              level_dn   [0:LEVEL - 1];
+   reg [$clog2(LEVEL)-1:0]              level_wb   [0:LEVEL - 1];
 
    wire [TREE_NUM_BITS-1:0]              tree_id_up  [0:LEVEL - 1];
    wire [TREE_NUM_BITS-1:0]              tree_id_dn  [0:LEVEL - 1];
@@ -126,10 +128,6 @@ endfunction
    wire [PTW+TREE_NUM_BITS:0] TaskFIFO_pop_data [0:LEVEL-1];
    wire [LEVEL-1:0] TaskFIFO_empty;
    wire [1:0] rpu_state_nxt [0:LEVEL-1];
-   wire [1:0] rpu_state_nxt_0;
-   wire [1:0] rpu_state_nxt_1;
-   wire [1:0] rpu_state_nxt_2;
-   wire [1:0] rpu_state_nxt_3;
 
    wire [LEVEL-1:0] rpu_push;
    wire [LEVEL-1:0] rpu_pop;
@@ -141,35 +139,41 @@ endfunction
    wire [LEVEL-1:0] TaskFIFO_full;
    wire [FIFO_WIDTH:0] fifo_counter [0:LEVEL-1]; 
 
+
+   wire [1:0] rpu_state_nxt_0;
+   wire [1:0] rpu_state_nxt_1;
+   // wire [1:0] rpu_state_nxt_2;
+   // wire [1:0] rpu_state_nxt_3;
+
    wire [PTW+TREE_NUM_BITS:0] TaskFIFO_push_data_0;
    wire [PTW+TREE_NUM_BITS:0] TaskFIFO_push_data_1;
-   wire [PTW+TREE_NUM_BITS:0] TaskFIFO_push_data_2;
-   wire [PTW+TREE_NUM_BITS:0] TaskFIFO_push_data_3;
+   // wire [PTW+TREE_NUM_BITS:0] TaskFIFO_push_data_2;
+   // wire [PTW+TREE_NUM_BITS:0] TaskFIFO_push_data_3;
 
    assign TaskFIFO_push_data_0 = TaskFIFO_push_data[0];
    assign TaskFIFO_push_data_1 = TaskFIFO_push_data[1];
-   assign TaskFIFO_push_data_2 = TaskFIFO_push_data[2];
-   assign TaskFIFO_push_data_3 = TaskFIFO_push_data[3];
+   // assign TaskFIFO_push_data_2 = TaskFIFO_push_data[2];
+   // assign TaskFIFO_push_data_3 = TaskFIFO_push_data[3];
 
    assign rpu_state_nxt_0 = rpu_state_nxt[0];
    assign rpu_state_nxt_1 = rpu_state_nxt[1];
-   assign rpu_state_nxt_2 = rpu_state_nxt[2];
-   assign rpu_state_nxt_3 = rpu_state_nxt[3];
+   // assign rpu_state_nxt_2 = rpu_state_nxt[2];
+   // assign rpu_state_nxt_3 = rpu_state_nxt[3];
 
    wire [PTW-1:0] rpu_push_data_0;
    wire [PTW-1:0] rpu_push_data_1;
-   wire [PTW-1:0] rpu_push_data_2;
-   wire [PTW-1:0] rpu_push_data_3;
+   // wire [PTW-1:0] rpu_push_data_2;
+   // wire [PTW-1:0] rpu_push_data_3;
 
    assign rpu_push_data_0 = rpu_push_data[0];
    assign rpu_push_data_1 = rpu_push_data[1];
-   assign rpu_push_data_2 = rpu_push_data[2];
-   assign rpu_push_data_3 = rpu_push_data[3];
+   // assign rpu_push_data_2 = rpu_push_data[2];
+   // assign rpu_push_data_3 = rpu_push_data[3];
 
    wire [TREE_NUM_BITS-1:0] rpu_treeId_0 = rpu_treeId[0];
    wire [TREE_NUM_BITS-1:0] rpu_treeId_1 = rpu_treeId[1];
-   wire [TREE_NUM_BITS-1:0] rpu_treeId_2 = rpu_treeId[2];
-   wire [TREE_NUM_BITS-1:0] rpu_treeId_3 = rpu_treeId[3];
+   // wire [TREE_NUM_BITS-1:0] rpu_treeId_2 = rpu_treeId[2];
+   // wire [TREE_NUM_BITS-1:0] rpu_treeId_3 = rpu_treeId[3];
 
 
 
@@ -186,6 +190,8 @@ generate
 		.PTW (PTW),
       .MTW (MTW),
 		.CTW (CTW),
+      .LEVEL (LEVEL),
+      .TREE_NUM (TREE_NUM),
       .ADW (ADW)
 		 ) u_PIFO (
             .i_clk           ( i_clk                        ),
@@ -227,6 +233,16 @@ generate
       assign o_task_fifo_full[i] = TaskFIFO_full[i];
    end
 
+   for (genvar i = 0; i < LEVEL; i++) begin
+      always @ (posedge i_clk or negedge i_arst_n) begin
+         if (!i_arst_n) begin
+            level_wb[i] <= '0;
+         end else begin
+            level_wb[i] <= level_up[i];
+         end
+    end
+end
+
 
    for (i=0;i<LEVEL-1;i=i+1) begin : loop1
       assign push_up[i+1]            = push_dn[i] ? 1'b1 
@@ -235,7 +251,7 @@ generate
                                        : ((rpu_treeId[i+1] & {LEVEL_BITS{1'b1}}) == i+1) ? rpu_push_data[i+1] : '1;
       assign pop_up[i+1]             = pop_dn[i] ? 1'b1 
                                        : ((rpu_treeId[i+1] & {LEVEL_BITS{1'b1}}) == i+1) ? rpu_pop[i+1] : 1'b0;
-      assign pop_data_dn[i]          = (level_up[i] == (LEVEL - 1)) ? {(MTW+PTW){1'b1}} 
+      assign pop_data_dn[i]          = (level_wb[i] == (LEVEL - 1)) ? {(MTW+PTW){1'b1}} 
                                        : pop_data_up[i+1]; // 和 level 有关，弄成全一
       assign my_addr[i+1]            = (push_dn[i] | pop_dn[i]) ? child_addr[i] : '0;
       assign tree_id_up[i+1]         = (push_dn[i] | pop_dn[i]) ? tree_id_dn[i] 
@@ -249,7 +265,7 @@ generate
                                  : ((rpu_treeId[0] & {LEVEL_BITS{1'b1}}) == 0) ? rpu_push_data[0] : '1;
    assign pop_up[0]             = pop_dn[LEVEL-1] ? 1'b1 
                                  : ((rpu_treeId[0] & {LEVEL_BITS{1'b1}}) == 0) ? rpu_pop[0] : 1'b0;
-   assign pop_data_dn[LEVEL - 1]   = (level_up[LEVEL - 1] == (LEVEL - 1)) ? {(MTW+PTW){1'b1}} 
+   assign pop_data_dn[LEVEL - 1]   = (level_wb[LEVEL - 1] == (LEVEL - 1)) ? {(MTW+PTW){1'b1}} 
                                  : pop_data_up[0]; // 和 level 有关，弄成全一
    assign my_addr[0]            = (push_dn[LEVEL-1] | pop_dn[LEVEL-1]) ? child_addr[LEVEL-1] : '0;
    assign tree_id_up[0]         = (push_dn[LEVEL-1] | pop_dn[LEVEL-1]) ? tree_id_dn[LEVEL-1] 
@@ -293,9 +309,7 @@ generate
       TaskFIFO #(
          .PTW(PTW),
          .TREE_NUM(TREE_NUM),
-         .TREE_NUM_BITS(TREE_NUM_BITS),
-         .BUF_SIZE(FIFO_SIZE),
-         .BUF_WIDTH(FIFO_WIDTH)
+         .BUF_SIZE(FIFO_SIZE)
       )tf(
          .clk(i_clk),
          .rst(!i_arst_n),
@@ -319,8 +333,7 @@ generate
    TaskDistribute #(
       .PTW(PTW),
       .LEVEL(LEVEL),
-      .TREE_NUM(TREE_NUM),
-      .TREE_NUM_BITS(TREE_NUM_BITS)
+      .TREE_NUM(TREE_NUM)
 	)td(
       .i_clk(i_clk),
       .i_arst_n(i_arst_n),

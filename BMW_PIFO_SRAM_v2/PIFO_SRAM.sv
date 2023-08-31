@@ -29,7 +29,7 @@ module PIFO_SRAM
 	parameter A_TREE ={LEVEL{1'b1}},
 	parameter TREE_NUM_BITS = $clog2(TREE_NUM),
 	parameter SRAM_ADW    = $clog2(TREE_NUM/LEVEL) + LEVEL,       // SRAM_Address width
-	parameter ADW    = LEVEL-1       // Address width in a level
+	parameter ADW    = LEVEL       // Address width in a level
 )
 (
    // Clock and Reset

@@ -58,23 +58,42 @@ reg [LEVEL_BITS-1:0] rpu_level_nxt [0:LEVEL-1];
 // ============================ debug =======================================
 reg [1:0] rpu_state_0;
 reg [1:0] rpu_state_1;
-reg [1:0] rpu_state_2;
-reg [1:0] rpu_state_3;
+// reg [1:0] rpu_state_2;
+// reg [1:0] rpu_state_3;
 
 reg [LEVEL_BITS-1:0] rpu_level_0;
 reg [LEVEL_BITS-1:0] rpu_level_1;
-reg [LEVEL_BITS-1:0] rpu_level_2;
-reg [LEVEL_BITS-1:0] rpu_level_3;
+// reg [LEVEL_BITS-1:0] rpu_level_2;
+// reg [LEVEL_BITS-1:0] rpu_level_3;
+
+reg [PTW-1:0] rpu_PushData_0;
+reg [PTW-1:0] rpu_PushData_1;
+// reg [PTW-1:0] rpu_PushData_2;
+// reg [PTW-1:0] rpu_PushData_3;
+// reg [PTW-1:0] rpu_PushData_4;
+// reg [PTW-1:0] rpu_PushData_5;
+// reg [PTW-1:0] rpu_PushData_6;
+// reg [PTW-1:0] rpu_PushData_7;
+
 
 assign rpu_state_0 = rpu_state[0];
 assign rpu_state_1 = rpu_state[1];
-assign rpu_state_2 = rpu_state[2];
-assign rpu_state_3 = rpu_state[3];
+// assign rpu_state_2 = rpu_state[2];
+// assign rpu_state_3 = rpu_state[3];
 
 assign rpu_level_0 = rpu_level[0];
 assign rpu_level_1 = rpu_level[1];
-assign rpu_level_2 = rpu_level[2];
-assign rpu_level_3 = rpu_level[3];
+// assign rpu_level_2 = rpu_level[2];
+// assign rpu_level_3 = rpu_level[3];
+
+assign rpu_PushData_0 = rpu_PushData[0];
+assign rpu_PushData_1 = rpu_PushData[1];
+// assign rpu_PushData_2 = rpu_PushData[2];
+// assign rpu_PushData_3 = rpu_PushData[3];
+// assign rpu_PushData_4 = rpu_PushData[4];
+// assign rpu_PushData_5 = rpu_PushData[5];
+// assign rpu_PushData_6 = rpu_PushData[6];
+// assign rpu_PushData_7 = rpu_PushData[7];
 
 
 // ============================ debug =======================================
