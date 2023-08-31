@@ -319,7 +319,7 @@ end
          .buf_out(TaskFIFO_pop_data[i]),
          .buf_empty(TaskFIFO_empty[i]),
          .buf_full(TaskFIFO_full[i]),
-         .fifo_counter(fifo_counter[i])
+         .o_fifo_counter(fifo_counter[i])
       );
    end
 

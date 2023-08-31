@@ -33,7 +33,7 @@ module TaskFIFO#(
    // port to output the data using pop.
    output                buf_empty, buf_full,      
    // buffer empty and full indication 
-   output[BUF_WIDTH:0] fifo_counter             
+   output[BUF_WIDTH:0] o_fifo_counter             
    // number of data pushed in to buffer   
 );
 
@@ -41,7 +41,6 @@ module TaskFIFO#(
 // { {1'b(push(1) or pop(0))}, TreeId, PushData(or '0 when pop)}
 
 reg[PTW+TREE_NUM_BITS:0]              buf_rd;
-wire                  buf_empty, buf_full;
 reg                   buf_empty_last;
 reg                   rd_en_last, wr_en_last;
 reg[BUF_WIDTH :0]    fifo_counter;
@@ -52,6 +51,7 @@ reg[PTW+TREE_NUM_BITS:0]              buf_mem[BUF_SIZE -1 : 0]; //
 
 assign buf_empty = (fifo_counter==0);   // Checking for whether buffer is empty or not
 assign buf_full = (fifo_counter== BUF_SIZE);  //Checking for whether buffer is full or not
+assign o_fifo_counter = fifo_counter;
 
 always_comb begin
    if( wr_en && rd_en )
