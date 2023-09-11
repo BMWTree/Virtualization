@@ -30,30 +30,41 @@ module IO_PORT
     input                            i_pop,
 
     output                           o_task_fail,
-    output [(MTW+PTW)-1:0]           o_pop_data,
-    output                           o_pop_data_valid
+    output [(MTW+PTW)-1:0]           o_pop_data
 );
 
 reg [LEVEL-1:0] push;
 reg [LEVEL-1:0] pop;
-reg [PTW-1:0] push_data [0:LEVEL-1];
+reg [(MTW+PTW)-1:0] push_data [0:LEVEL-1];
 reg [TREE_NUM_BITS-1:0] tree_id [0:LEVEL-1];
-wire [PTW-1:0] pop_data [0:LEVEL-1];
+reg [TREE_NUM_BITS-1:0] pop_tree_id;
+wire [(MTW+PTW)-1:0] pop_data [0:LEVEL-1];
+reg [(MTW+PTW)-1:0] pop_data_o;
 wire [LEVEL-1:0] task_fifo_full;
 wire [LEVEL-1:0] root_id;
 
-assign root_id = tree_id & {LEVEL_BITS{1'b1}};
+assign root_id = i_tree_id & {LEVEL_BITS{1'b1}};
 
 for (genvar i = 0; i < LEVEL; i++) begin
     assign tree_id[i] = (root_id == i) ? i_tree_id : '0;
     assign push[i] = (root_id == i) ? i_push : '0;
     assign push_data[i] = (root_id == i) ? i_push_data : '0;
-    assign pop[i] = (root_id == i) ? i_pop : '0;
+    assign pop[i] = (root_id == i) ? i_pop : '0;  
+end
+
+always_comb begin
+    pop_data_o = '1;
+    for(int i=0; i<LEVEL; ++i)begin
+        if(pop_data[i] != '1)
+            pop_data_o = pop_data[i];
+    end
 end
 
 // if task fifo full then task fail
 // o_task_fail connect to all [LEVEL-1:0] task_fifo_full
 assign o_task_fail = task_fifo_full[root_id];
+
+assign o_pop_data = pop_data_o;
 
 
 
