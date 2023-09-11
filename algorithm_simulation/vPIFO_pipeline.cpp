@@ -2,7 +2,7 @@
 
 using namespace std;
 
-const int N = 10;
+const int N = 5;
 
 enum Type {
     Push,
@@ -19,20 +19,38 @@ struct Task {
         TTL = 0;
         type = Empty;
     }
-    Task(enum Type type, int ttl) {
+    Task(enum Type t, int r, int ttl) {
+        type = t;
+        root = r;
         TTL = ttl;
-        type = type;
     }
 }r[N];
 
 queue<Task> task_list[N];
 
-int task_num, T, use_num, Q;
+int task_num, T, use_num;
+double Q;
 
 int main() {
 
+    task_num = 100;
+    
+    for (int i = 1; i <= task_num; ++i) {
+        int root = rand() % N;
+        int type = rand() % 2;
+
+        Task t;
+        if (type > 0)
+            t = (Task){Push, root, N};
+        else 
+            t = (Task){Pop, root, N};
+        task_list[root].push(t);
+    }
+
     printf("N = %d, task_num = %d, ", N, task_num);
-    while (task_num) {
+
+    while (task_num > 0) {
+        T++;
         // statistics before updating status
         for (int i = 0; i < N; ++i) {
             // the RPU is running
@@ -65,7 +83,6 @@ int main() {
                 r[i].type = Empty;
                 r[i].TTL = 0;
             }
-            
         }
 
         // send new task
@@ -83,7 +100,8 @@ int main() {
                             r[i] = t;
                             task_list[i].pop();
                             // The last RPU should be locked
-                            r[j].type = Locked;
+                            if (r[j].type == Empty)
+                                r[j].type = Locked;
                             r[j].TTL = 1;
                         }
                     }
@@ -91,7 +109,9 @@ int main() {
             }
         }
     }
-    Q = (double) use_num / (double) (N * T);
-    printf("T = %d, Q = %.4lf\n", T, Q);
+
+    Q = ((double)use_num) / ((double)(N * T));
+    printf("use_num = %d, T = %d, Q = %.4lf\n", use_num, T, Q);
+
     return 0;
 }
