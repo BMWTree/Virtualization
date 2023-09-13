@@ -187,6 +187,7 @@ int main() {
                             r[i] = t;
                             task_list[i].pop();
                             pop(tree[t.root]);
+                            printf("log: pop tree %d in RPU %d\n", t.root, i);
                             // The last RPU should be locked
                             if (r[j].type == Empty)
                                 r[j].type = Locked;
