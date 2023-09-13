@@ -48,7 +48,7 @@ int get_son(int r, int d) {
     return tot;
 }
 
-void insert(int r, int x) {
+void push(int r, int x) {
     // try to insert x in this node
     if (node[r].min[0] == inf) {
         node[r].min[0] = x;
@@ -64,11 +64,11 @@ void insert(int r, int x) {
     if (node[r].num[0] > node[r].num[1])
         go_down = 1;
     if (x < node[r].min[go_down]) {
-        insert(get_son(r, go_down), node[r].min[go_down]);
+        push(get_son(r, go_down), node[r].min[go_down]);
         node[r].min[go_down] = x;
     }
     else
-        insert(get_son(r, go_down), x);
+        push(get_son(r, go_down), x);
     node[r].num[go_down]++;
 }
 
@@ -177,7 +177,7 @@ int main() {
                     Task t = task_list[i].front();
                     if (t.type == Push) {
                         r[i] = t;
-                        insert(tree[t.root], t.val);
+                        push(tree[t.root], t.val);
                         printf("log: push val %d of tree %d in RPU %d\n", t.val, t.root, i);
                         task_list[i].pop();
                     }
@@ -186,6 +186,7 @@ int main() {
                         if (r[j].TTL <= 1) {
                             r[i] = t;
                             task_list[i].pop();
+                            pop(tree[t.root]);
                             // The last RPU should be locked
                             if (r[j].type == Empty)
                                 r[j].type = Locked;
