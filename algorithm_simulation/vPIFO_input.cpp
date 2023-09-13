@@ -41,6 +41,8 @@ int main() {
     while (T < 100) {
         T++;
         t = (Task){Push, 0, N};
+
+        // insert push task
         for (int i = 0, j; i < N; ++i) {
             j = rand() % 10;
             if (j < 6) {
@@ -50,6 +52,7 @@ int main() {
             }
         }
 
+        // insert pop task every two cycle
         if (T % 2 == 0) {
             if (task_num[round_robin] > 0) {
                 t = (Task){Pop, round_robin, N};
