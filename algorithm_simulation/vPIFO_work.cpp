@@ -1,3 +1,7 @@
+// version 3: implement the BMW Tree
+// now when the task are sent into RPU, 
+// have the work done in Tree at the same time
+
 # include <bits/stdc++.h>
 
 using namespace std;

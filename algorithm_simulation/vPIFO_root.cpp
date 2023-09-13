@@ -1,3 +1,10 @@
+// version 4: add the specific tree "root"
+// for every push i task in tree_A, also push A in tree_root
+// every two cycle, add a pop task in tree_root
+// if the result of this pop task is A, then add pop task in tree_A
+
+// In this code the scheduling algorithm of root is FIFO(queue)
+
 # include <bits/stdc++.h>
 
 using namespace std;

@@ -1,3 +1,6 @@
+// version 2: change the input
+// push task are independent and identically distributed
+// pop task are sent every two cycle in round robin
 # include <bits/stdc++.h>
 
 using namespace std;

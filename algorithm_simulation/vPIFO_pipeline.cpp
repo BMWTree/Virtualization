@@ -1,3 +1,6 @@
+// version 1: only implement the vPIFO pipeline
+// input is batch processed and random
+// run until all the task list is empty
 # include <bits/stdc++.h>
 
 using namespace std;
