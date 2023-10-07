@@ -116,7 +116,7 @@ queue<Task> task_list[N];
 int task_num[M], T, use_num;
 double Q;
 int wait_time[N], finish_time[M], virtual_time;
-int starve_count;
+int starve_count, send_count[N];
 int push_num[M], pop_num[M], push_sum, pop_sum;
 
 int main() {
@@ -151,8 +151,10 @@ int main() {
 
                 // pifo 0 send push i
                 t.root = 0;
-                // WFQ use finish time as rank, as all the rates are equal, process time = packet size
-                t.rank = max(finish_time[i], virtual_time) + t.val;
+                // If the rates for all users are equal, packet size can be use as process time
+                finish_time[i] = max(finish_time[i], virtual_time) + t.val;
+                // WFQ use finish time as rank
+                t.rank = finish_time[i];
                 t.val = i;
                 task_list[0].push(t);
                 task_num[0]++;
@@ -173,11 +175,11 @@ int main() {
             if (RPU[i].type == Push || RPU[i].type == Pop || RPU[i].type == WriteBack)
                 use_num++;
             // after a root pop, now we know which tree to pop
-            if (RPU[i].TTL == N && RPU[i].type == Pop && RPU[i].root == 0) {
+            if (RPU[i].TTL == N && RPU[i].type == Pop) {
                 int ans = pop(tree[RPU[i].root]).second;
                 if (RPU[i].root == 0) {
                     t = (Task){Pop, ans, N};
-                    printf("log: add pop task %d\n", ans);
+                    // printf("log: add pop task %d\n", ans);
                     task_list[ans % N].push(t);
                     task_num[ans]--;
                 }
@@ -225,12 +227,13 @@ int main() {
             if (RPU[i].type == Empty) {
                 if (!task_list[i].empty()) {
                     Task t = task_list[i].front();
+                    send_count[i]++;
                     if (t.type == Push) {
                         RPU[i] = t;
                         pa.first = t.rank;
                         pa.second = t.val;
                         push(tree[t.root], pa);
-                        printf("log: push val %d of tree %d in RPU %d\n", t.val, t.root, i);
+                        // printf("log: push val %d of tree %d in RPU %d\n", t.val, t.root, i);
                         task_list[i].pop();
                     }
                     else {
@@ -238,7 +241,7 @@ int main() {
                         if (RPU[j].TTL <= 1) {
                             RPU[i] = t;
                             task_list[i].pop();
-                            printf("log: pop tree %d in RPU %d\n", t.root, i);
+                            // printf("log: pop tree %d in RPU %d\n", t.root, i);
                             // The last RPU should be locked
                             if (RPU[j].type == Empty)
                                 RPU[j].type = Locked;
@@ -249,11 +252,13 @@ int main() {
             }
         }
 
+        /*
         printf("Cycle %d\n", T);
         printf("push sum: %d, pop sum: %d\n", push_sum, pop_sum);
         for (int i = 1; i < M; ++i)
             printf("user %d  push num: %d, pop num: %d\n", i, push_num[i], pop_num[i]);
         printf("starvation time: %d\n", starve_count);
+        */
     }
 
     /*
@@ -262,6 +267,9 @@ int main() {
         tree_print(0, tree[i], 1);
     }
     */
+
+    for (int i = 0; i < N; ++i)
+        printf("throughput of task list %d : %.2lf\n", i, send_count[i] / 300.0);
 
     Q = ((double)use_num) / ((double)(N * T));
     printf("use_num = %d, T = %d, Q = %.4lf\n", use_num, T, Q);
