@@ -5,7 +5,7 @@
 using std::ostream;
 
 typedef struct SchedStrategy_* SchedStrategy;
-typedef struct StrategyWFQ_* StrategyWFQ;
+// typedef struct StrategyWFQ_* StrategyWFQ;
 
 typedef enum {
     UNKNOWNTYPE,
@@ -14,14 +14,14 @@ typedef enum {
 
 struct SchedStrategy_{
     SchedStrategyType type;
-    union {
-        StrategyWFQ wfq;
-    } u;
+    // union {
+    //     StrategyWFQ wfq;
+    // } u;
 };
 
-struct StrategyWFQ_{
-    int palce_holder;
-};
+// struct StrategyWFQ_{
+//     int palce_holder;
+// };
 
 SchedStrategy SchedStrategyUnknown();
 SchedStrategy SchedStrategyWFQ();
