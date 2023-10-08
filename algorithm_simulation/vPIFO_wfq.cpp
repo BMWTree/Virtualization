@@ -7,14 +7,18 @@
 
 using namespace std;
 
-const int N = 5;
+// L is the max length of packet
+const int L = 30;
+// M is the number of users, but user 0 is root
 const int M = 10;
+// N is the number of RPUs, also the number of Task Lists
+const int N = 5;
 // Each user sends a Push task with a probability of P / M per cycle
 const int P = 1; 
 // S is the threshold that triggers the anti-starvation mechanism
 const int S = 10;
-// L is the max length of packet
-const int L = 30;
+// T is the cycle numbers
+const int T = 300;
 // In BMW Tree, min = inf means the node is empty
 const int inf = 1e9 + 7;
 
@@ -111,13 +115,32 @@ void tree_print (int fa, int root, int dep) {
         tree_print(root, node[root].son[1], dep + 1);
 }
 
-queue<Task> task_list[N];
-
-int task_num[M], T, use_num;
+int task_num[M], use_num;
 double Q;
 int wait_time[N], finish_time[M], virtual_time;
-int starve_count, send_count[N];
+int starve_count, hungry_count, hungry_delay, send_count[N];
 int push_num[M], pop_num[M], push_sum, pop_sum;
+
+queue<Task> task_list[N];
+
+void push_list (int i, Task t) {
+    if (task_list[i].empty())
+        wait_time[i] = 0;
+    task_list[i].push(t);
+}
+
+void pop_list (int i) {
+    task_list[i].pop();
+    if (wait_time[i] > S) {
+        hungry_count++;
+        hungry_delay += wait_time[i] - S;
+    }
+    if (task_list[i].empty())
+        wait_time[i] = -inf;
+    else
+        wait_time[i] = 0;
+}
+
 
 int main() {
 
@@ -133,8 +156,7 @@ int main() {
 
     printf("N = %d, M = %d\n", N, M);
 
-    while (T < 300) {
-        T++;
+    for (int cycle = 0; cycle < T; ++cycle) {
         t = (Task){Push, 0, N};
 
         // insert push task
@@ -142,11 +164,11 @@ int main() {
         for (int i = 1, j; i < M; ++i) {
             j = rand() % M;
             if (j <= P) {
-                // pifo i send push val
+                // pifo i send a push task and the packet size is val
                 t.root = i;
                 t.rank = rand() % inf;
                 t.val = rand() % L;
-                task_list[i % N].push(t);
+                push_list(i % N, t);
                 task_num[i]++;
 
                 // pifo 0 send push i
@@ -156,7 +178,7 @@ int main() {
                 // WFQ use finish time as rank
                 t.rank = finish_time[i];
                 t.val = i;
-                task_list[0].push(t);
+                push_list(0, t);
                 task_num[0]++;
             }
         }
@@ -165,7 +187,7 @@ int main() {
         // insert pop root task every two cycle
         if (T % 2 == 0 && task_num[0] > 0) {
             t = (Task){Pop, 0, N};
-            task_list[0].push(t);
+            push_list(0, t);
             task_num[0]--;
         }
 
@@ -180,7 +202,7 @@ int main() {
                 if (RPU[i].root == 0) {
                     t = (Task){Pop, ans, N};
                     // printf("log: add pop task %d\n", ans);
-                    task_list[ans % N].push(t);
+                    push_list(ans % N, t);
                     task_num[ans]--;
                 }
                 else 
@@ -222,6 +244,14 @@ int main() {
             }
         }
 
+        // anti-starvation mechanism
+        for (int i = 0; i < N; ++i) {
+            wait_time[i]++;
+            if (wait_time[i] > S) {
+
+            }
+        }
+
         // send new task
         for (int i = 0, j; i < N; ++i) {
             if (RPU[i].type == Empty) {
@@ -234,13 +264,13 @@ int main() {
                         pa.second = t.val;
                         push(tree[t.root], pa);
                         // printf("log: push val %d of tree %d in RPU %d\n", t.val, t.root, i);
-                        task_list[i].pop();
+                        pop_list(i);
                     }
                     else {
                         j = (i - 1 + N) % N;
                         if (RPU[j].TTL <= 1) {
                             RPU[i] = t;
-                            task_list[i].pop();
+                            pop_list(i);
                             // printf("log: pop tree %d in RPU %d\n", t.root, i);
                             // The last RPU should be locked
                             if (RPU[j].type == Empty)
@@ -257,8 +287,11 @@ int main() {
         printf("push sum: %d, pop sum: %d\n", push_sum, pop_sum);
         for (int i = 1; i < M; ++i)
             printf("user %d  push num: %d, pop num: %d\n", i, push_num[i], pop_num[i]);
-        printf("starvation time: %d\n", starve_count);
         */
+        if (hungry_count > 0) {
+            printf("hungry time: %d, starve time: %d\n, ", hungry_count, starve_count);
+            printf("average hungry delay: %.2lf\n", 1.0 * hungry_delay / hungry_count);
+        }
     }
 
     /*
@@ -269,7 +302,7 @@ int main() {
     */
 
     for (int i = 0; i < N; ++i)
-        printf("throughput of task list %d : %.2lf\n", i, send_count[i] / 300.0);
+        printf("throughput of task list %d : %.2lf\n", i, 1.0 * send_count[i] / T);
 
     Q = ((double)use_num) / ((double)(N * T));
     printf("use_num = %d, T = %d, Q = %.4lf\n", use_num, T, Q);
