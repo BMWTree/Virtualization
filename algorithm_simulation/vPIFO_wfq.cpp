@@ -3,22 +3,26 @@
 // add anti-starvation mechanism
 // change the output information
 
-# include <bits/stdc++.h>
+#include <bits/stdc++.h>
+#include <random>
 
 using namespace std;
+
+
+const char *TypeNames[] = {"Push", "Pop", "WriteBack","Locked",""};
 
 // L is the max length of packet
 const int L = 30;
 // M is the number of users, but user 0 is root
-const int M = 10;
+const int M = 5;
 // N is the number of RPUs, also the number of Task Lists
 const int N = 5;
 // Each user sends a Push task with a probability of P / M per cycle
 const int P = 1; 
 // S is the threshold that triggers the anti-starvation mechanism
-const int S = 10;
+const int S = 240;
 // T is the cycle numbers
-const int T = 500;
+const int T = 50000;
 // In BMW Tree, min = inf means the node is empty
 const int inf = 1e9 + 7;
 
@@ -127,6 +131,7 @@ void push_task (int i, Task t) {
     if (task_list[i].empty())
         wait_time[i] = 0;
     task_list[i].push(t);
+    printf("Add Task %s in RPU %d \n",TypeNames[t.type], i);
 }
 
 void pop_task (int i) {
@@ -144,10 +149,17 @@ void pop_task (int i) {
         wait_time[i] = -inf;
     else
         wait_time[i] = 0;
+
+
 }
 
 
 int main() {
+
+    default_random_engine generator;
+    uniform_real_distribution<double> distribution(0.0,1.0);
+    double number = distribution(generator);
+
 
     // initialize the roots of the trees
     for (int i = 0; i < M; ++i)
@@ -165,12 +177,15 @@ int main() {
 
     for (int cycle = 0; cycle < T; ++cycle) {
         t = (Task){Push, 0, N};
+        printf("\nCycle %d\n", cycle);
 
         // insert push task
         // Attention: 0 is the root queue and it don't send push task proactively
         for (int i = 1, j; i < M; ++i) {
-            j = rand() % M;
-            if (j <= P) {
+            //j = rand() % (12 * M);
+            //if (/*cycle % 2 == 0 &&*/ j <= P) {
+            double number = distribution(generator);
+            if (number <= 0.03) {
                 // pifo i send a push task and the packet size is val
                 t.root = i;
                 t.rank = rand() % inf;
@@ -192,8 +207,8 @@ int main() {
         
 
         // insert pop root task every two cycle
-        if (T % 2 == 0 && task_num[0] > 0) {
-            t = (Task){Pop, 0, N};
+        if (/*cycle % 2 == 0 &&*/ task_num[0] > 0) {
+            t = (Task){Pop, 0, N};      
             push_task(0, t);
             task_num[0]--;
         }
@@ -210,7 +225,7 @@ int main() {
                     // after a root pop, now we know which tree to pop
                     if (RPU[i].root == 0) {
                         t = (Task){Pop, ans, N};
-                        // printf("log: add pop task %d\n", ans);
+                        printf("log: add pop task %d\n", ans);
                         push_task(ans % N, t);
                         task_num[ans]--;
                     }
@@ -228,6 +243,19 @@ int main() {
             }
         }
 
+        printf("#######\n");
+        for(int i = 0; i<N; i++)
+        {
+            printf("Task List %d: ", i);
+            queue<Task> temp_q = task_list[i];
+            while (!temp_q.empty()) {
+                printf("%s ", TypeNames[temp_q.front().type]);
+                temp_q.pop();
+            }
+            printf("\n");
+        }
+        printf("#######\n");
+        
         // pass down the existing task
         Task nt[2]; // scrolling array used to pass the task
         nt[1] = RPU[N - 1];
@@ -283,6 +311,17 @@ int main() {
             }
         }
 
+
+
+
+        printf("---------\n");
+        for(int i = 0; i<N; i++)
+        {
+            printf("RPU %d is %s\n", i, TypeNames[RPU[i].type]);
+           
+        }
+        printf("-------\n");
+
         // anti-starvation mechanism
         if (beggar == -1) {
             for (int i = 0; i < N; ++i)
@@ -337,7 +376,7 @@ int main() {
             }
         }
 
-        printf("Cycle %d\n", T);
+        // printf("Cycle %d\n", cycle);
         printf("push sum: %d, pop sum: %d\n", push_sum, pop_sum);
         for (int i = 1; i < M; ++i)
             printf("user %d  push num: %d, pop num: %d\n", i, push_num[i], pop_num[i]);
