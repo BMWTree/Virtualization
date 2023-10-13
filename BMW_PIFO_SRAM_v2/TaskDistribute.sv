@@ -51,6 +51,7 @@ reg [PTW-1:0] rpu_PushData [0:LEVEL-1];
 
 // RPU state
 reg [1:0] rpu_state [0:LEVEL-1];
+reg [1:0] rpu_state_mid [0:LEVEL-1];
 reg [LEVEL_BITS-1:0] rpu_level [0:LEVEL-1];
 reg [LEVEL_BITS-1:0] rpu_level_nxt [0:LEVEL-1];
 wire [LEVEL-1:0] rpu_ready_nxt ;
@@ -236,6 +237,66 @@ for (genvar i = 0; i < LEVEL; i++) begin
     end
 end
 
+// rpu_level_mid is rpu_level_nxt
+    always_comb begin
+        for (int i = 0; i < LEVEL; i++) begin
+            if (!i_arst_n) begin
+                rpu_state_mid[i] = ST_IDLE;
+            end else begin
+                case (rpu_state[i])
+                    ST_IDLE: begin
+                        case ({rpu_push_inherit_nxt[i], rpu_pop_inherit_nxt[i]})
+                            2'b00,
+                            2'b11: begin // Not allow concurrent read and write
+                                rpu_state_mid[i] = ST_IDLE;
+                            end
+                            2'b01: begin // pop
+                                rpu_state_mid[i] = ST_POP;
+                            end
+                            2'b10: begin // push
+                                rpu_state_mid[i] = ST_PUSH;
+                            end
+                        endcase
+                    end
+
+                    ST_PUSH: begin       	
+                        case ({rpu_push_inherit_nxt[i], rpu_pop_inherit_nxt[i]})
+                            2'b00,
+                            2'b11: begin 
+                                rpu_state_mid[i] = ST_IDLE;
+                            end
+                            2'b01: begin
+                                rpu_state_mid[i] = ST_POP;
+                            end
+                            2'b10: begin 
+                                rpu_state_mid[i] = ST_PUSH;
+                            end
+                        endcase   
+                    end   
+
+                    ST_POP: begin
+                        rpu_state_mid[i] = ST_WB;
+                    end		
+                    
+                    ST_WB: begin		       
+                        case ({rpu_push_inherit_nxt[i], rpu_pop_inherit_nxt[i]})
+                            2'b00,
+                            2'b11: begin 
+                                rpu_state_mid[i] = ST_IDLE;
+                            end
+                            2'b01: begin
+                                rpu_state_mid[i] = ST_POP;
+                            end
+                            2'b10: begin 
+                                rpu_state_mid[i] = ST_PUSH;
+                            end
+                        endcase
+                    end			
+                endcase
+            end
+        end
+    end
+
 // ============================ end drive rpu state and level =======================================
 
 // ============================ drive TaskHead =======================================
@@ -275,24 +336,24 @@ end
 // ============================ drive rpu_push_new and rpu_pop_new =======================================
 
 for (genvar i = 0; i < LEVEL; i++) begin 
-    assign rpu_ready_nxt[i] = (rpu_state[i] == ST_IDLE) 
-                            || (rpu_state[i] != ST_POP && rpu_level[i] == LEVEL-1);// ST_PUSH or ST_WB
+    assign rpu_ready_nxt[i] = (rpu_state_mid[i] == ST_IDLE) 
+                            || (rpu_state_mid[i] != ST_POP && rpu_level_nxt[i] == LEVEL-1);// ST_PUSH or ST_WB
 end
 
 for (genvar i = 2; i < LEVEL; i++) begin
-    assign rpu_push_new_nxt[i] = (rpu_state[i] != ST_IDLE) ? 1'b0 : TaskHead_valid[i] ? (TaskHead_type[i] == 1'b1) : 1'b0;
-    assign rpu_pop_new_nxt[i] = (rpu_state[i] != ST_IDLE || !rpu_ready_nxt[i-1]/*rpu_state[i-1] != ST_IDLE*/ || (rpu_pop_nxt[i-1] | rpu_push_nxt[i-1])) ? 1'b0 : TaskHead_valid[i] ? (TaskHead_type[i] == 1'b0) : 1'b0;
+    assign rpu_push_new_nxt[i] = (rpu_state_mid[i] != ST_IDLE) ? 1'b0 : TaskHead_valid[i] ? (TaskHead_type[i] == 1'b1) : 1'b0;
+    assign rpu_pop_new_nxt[i] = (rpu_state_mid[i] != ST_IDLE || !rpu_ready_nxt[i-1]/*rpu_state_mid[i-1] != ST_IDLE*/ || (rpu_pop_nxt[i-1] | rpu_push_nxt[i-1])) ? 1'b0 : TaskHead_valid[i] ? (TaskHead_type[i] == 1'b0) : 1'b0;
 end
 
-assign rpu_push_new_nxt[1] = (rpu_state[1] != ST_IDLE) ? 1'b0 : TaskHead_valid[1] ? (TaskHead_type[1] == 1'b1) : 1'b0;
-assign rpu_pop_new_nxt[1] = (rpu_state[1] != ST_IDLE || !rpu_ready_nxt[0]/*rpu_state[0] != ST_IDLE*/ || (rpu_pop_inherit_nxt[0] | rpu_push_inherit_nxt[0])) ? 1'b0 : TaskHead_valid[1] ? (TaskHead_type[1] == 1'b0) : 1'b0;
+assign rpu_push_new_nxt[1] = (rpu_state_mid[1] != ST_IDLE) ? 1'b0 : TaskHead_valid[1] ? (TaskHead_type[1] == 1'b1) : 1'b0;
+assign rpu_pop_new_nxt[1] = (rpu_state_mid[1] != ST_IDLE || !rpu_ready_nxt[0]/*rpu_state_mid[0] != ST_IDLE*/ || (rpu_pop_inherit_nxt[0] | rpu_push_inherit_nxt[0])) ? 1'b0 : TaskHead_valid[1] ? (TaskHead_type[1] == 1'b0) : 1'b0;
 
-assign rpu_push_new_nxt[0] = (rpu_state[0] != ST_IDLE) ? 1'b0 
+assign rpu_push_new_nxt[0] = (rpu_state_mid[0] != ST_IDLE) ? 1'b0 
 : (rpu_pop_new_nxt[1] == 1'b1) ? 1'b0 
 : TaskHead_valid[0] ? (TaskHead_type[0] == 1'b1) : 1'b0;
-assign rpu_pop_new_nxt[0] = (rpu_state[0] != ST_IDLE) ? 1'b0 
+assign rpu_pop_new_nxt[0] = (rpu_state_mid[0] != ST_IDLE) ? 1'b0 
 : (rpu_pop_new_nxt[1] == 1'b1) ? 1'b0 
-: (!rpu_ready_nxt[LEVEL-1] /*rpu_state[LEVEL-1] != ST_IDLE*/ || (rpu_pop_nxt[LEVEL-1] | rpu_push_nxt[LEVEL-1])) ? 1'b0 
+: (!rpu_ready_nxt[LEVEL-1] /*rpu_state_mid[LEVEL-1] != ST_IDLE*/ || (rpu_pop_nxt[LEVEL-1] | rpu_push_nxt[LEVEL-1])) ? 1'b0 
 : TaskHead_valid[0] ? (TaskHead_type[0] == 1'b0) : 1'b0;
 
 always_ff @( posedge i_clk ) begin
@@ -304,6 +365,9 @@ end
 
 
 // ============================ output assign =======================================
+
+wire [PTW-1:0] TaskHead_PushData_1;
+assign TaskHead_PushData_1 = TaskHead_PushData[1];
 
 for (genvar i = 0; i < LEVEL; i++) begin
     always_ff @( posedge i_clk ) begin

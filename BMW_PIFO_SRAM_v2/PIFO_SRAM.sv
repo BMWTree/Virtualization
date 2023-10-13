@@ -58,13 +58,14 @@ module PIFO_SRAM
    output [2*(CTW+MTW+PTW)-1:0]   o_write_data,  // O - SRAM Write Data {sub_tree_size3,pifo_val3,sub_tree_size2,pifo_val2,sub_tree_size1,pifo_val1,sub_tree_size0,pifo_val0}
 
    input[TREE_NUM_BITS-1:0]		  i_tree_id,
-   output[TREE_NUM_BITS-1:0]	  o_tree_id,
+   output[TREE_NUM_BITS-1:0]	     o_tree_id,
 
    input  [ADW-1:0]               i_my_addr,
    output [ADW-1:0]               o_child_addr,
 
    input [$clog2(LEVEL)-1:0]      i_level,
    output [$clog2(LEVEL)-1:0]     o_level,
+   output                         o_is_level0_pop,
 
    output [SRAM_ADW-1:0]               o_read_addr,
    output [SRAM_ADW-1:0]               o_write_addr,
@@ -486,6 +487,7 @@ assign o_state_nxt = state_nxt;
    assign o_child_addr  = child_addr;
 
    assign o_level = cur_level + 1;
+   assign o_is_level0_pop = (cur_level == 0) && (fsm == ST_POP);
 
    assign o_tree_id = cur_tree_id; // treeid
 endmodule

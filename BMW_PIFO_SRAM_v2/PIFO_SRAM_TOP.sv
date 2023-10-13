@@ -48,8 +48,10 @@ module PIFO_SRAM_TOP
    input [(MTW+PTW)-1:0]            i_push_data [0:LEVEL-1],
    
    input [LEVEL-1:0]                i_pop,
+   output [TREE_NUM_BITS-1:0]       o_tree_id [0:LEVEL-1],
    output [(MTW+PTW)-1:0]           o_pop_data [0:LEVEL-1],
 
+   output [LEVEL-1:0]               o_is_level0_pop,
    output [LEVEL-1:0]               o_task_fifo_full
 );
 //-----------------------------------------------------------------------------
@@ -91,9 +93,9 @@ endfunction
    wire [(MTW+PTW)-1:0]                push_data_up [0:LEVEL-1];
    wire [LEVEL-1:0]                    pop_up;
    wire [(MTW+PTW)-1:0]                pop_data_up  [0:LEVEL-1];
-   wire                                push_dn      [0:LEVEL-1];
+   wire [LEVEL-1:0]                    push_dn      ;
    wire [(MTW+PTW)-1:0]                push_data_dn [0:LEVEL-1];
-   wire                                pop_dn       [0:LEVEL-1];
+   wire [LEVEL-1:0]                    pop_dn;
    wire [(MTW+PTW)-1:0]                pop_data_dn  [0:LEVEL-1];
    
    wire [LEVEL - 1:0]                  read;
@@ -107,6 +109,7 @@ endfunction
 
    wire [TREE_NUM_BITS-1:0]              tree_id_up  [0:LEVEL - 1];
    wire [TREE_NUM_BITS-1:0]              tree_id_dn  [0:LEVEL - 1];
+   wire [LEVEL-1:0]                      is_level0_pop;
    
    wire [LEVEL-1:0]                    we;
    wire [SRAM_ADW-1:0]                   waddr        [0:LEVEL - 1];
@@ -175,6 +178,8 @@ endfunction
    // wire [TREE_NUM_BITS-1:0] rpu_treeId_2 = rpu_treeId[2];
    // wire [TREE_NUM_BITS-1:0] rpu_treeId_3 = rpu_treeId[3];
 
+   wire [TREE_NUM_BITS-1:0]              tree_id_dn_0;
+
 
 
 
@@ -221,6 +226,7 @@ generate
 
             .i_level     ( level_up[i] ),
             .o_level     ( level_dn[i] ),
+            .o_is_level0_pop     ( is_level0_pop[i] ),
 
             .o_read_addr     ( read_addr    [i] ),
             .o_write_addr    ( write_addr    [i] ),
@@ -228,12 +234,15 @@ generate
          );
    end
    
+   assign tree_id_dn_0 = tree_id_dn[0];
    for (i=0;i<LEVEL;i=i+1) begin
       assign o_pop_data[i] = pop_data_up[i];
       assign o_task_fifo_full[i] = TaskFIFO_full[i];
+      assign o_tree_id[i] = tree_id_dn[i];
+      assign o_is_level0_pop[i] = is_level0_pop[i];
    end
 
-   for (genvar i = 0; i < LEVEL; i++) begin
+   for (i = 0; i < LEVEL; i++) begin
       always @ (posedge i_clk or negedge i_arst_n) begin
          if (!i_arst_n) begin
             level_wb[i] <= '0;
