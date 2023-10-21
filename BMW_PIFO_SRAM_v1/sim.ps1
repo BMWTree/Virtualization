@@ -1,2 +1,0 @@
-iverilog -g2005-sv INFER_SDPRAM.v PIFO_SRAM_TOP.sv PUSH_RPU.sv POP_RPU.sv POP_RPU_PAIR.sv TC_SRAM_NEW.sv
-vvp a.out
