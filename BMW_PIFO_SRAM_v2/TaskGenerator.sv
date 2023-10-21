@@ -7,19 +7,21 @@
 
 module TASK_GENERATOR
 #(
-   parameter PTW    = 16,       // Payload data width
-   parameter MTW    = 0,        // Metdata width
+   parameter PRIORITY_NUM    = 16,
+   parameter PRIORITY_BITS   = $clog2(PRIORITY_NUM),
+   parameter TREE_NUM = 4,
+	parameter TREE_NUM_BITS = $clog2(TREE_NUM),
+   parameter PTW    = 16, // Payload data width, should not less than PRIORITY_BITS, cause priority will be placed in PTW
+   parameter MTW    = TREE_NUM_BITS, // Metdata width should not less than TREE_NUM_BITS, cause tree_id will be placed in MTW
    parameter CTW    = 10,       // Counter width
    parameter LEVEL  = 4,         // Sub-tree level
    parameter ROOT_TREE_ID = 0,
    parameter ROOT_RPU_ID = 0,
-   parameter TREE_NUM = 4,
    parameter FIFO_SIZE    = 8,
    parameter FIFO_WIDTH    = $clog2(FIFO_SIZE),
 	parameter LEVEL_BITS = $clog2(LEVEL),
 	parameter LEVEL_MASK ={LEVEL{1'b1}},    // Tree level
 	parameter A_TREE ={LEVEL{1'b1}},
-	parameter TREE_NUM_BITS = $clog2(TREE_NUM),
    parameter SRAM_ADW    = $clog2(TREE_NUM/LEVEL) + LEVEL,       // SRAM_Address width
    
    parameter ADW    = LEVEL       // Address width in a level
@@ -30,6 +32,7 @@ module TASK_GENERATOR
    
    // Push and Pop port to the whole PIFO tree
    input [TREE_NUM_BITS-1:0]        i_push_tree_id,
+   input [PRIORITY_BITS-1:0]        i_push_priority,
    input                            i_push,
    input [(MTW+PTW)-1:0]            i_push_data,
    
@@ -48,6 +51,7 @@ wire [TREE_NUM_BITS-1:0] pop_tree_id;
 wire [TREE_NUM_BITS-1:0] pifo_o_tree_id [0:LEVEL-1];
 wire [TREE_NUM_BITS-1:0] pifo_i_tree_id [0:LEVEL-1];
 wire [(MTW+PTW)-1:0] push_data [0:LEVEL-1];
+wire [(MTW+PTW)-1:0] push_data_root;
 wire [(MTW+PTW)-1:0] pop_data [0:LEVEL-1];
 wire [LEVEL-1:0] task_fifo_full;
 wire [LEVEL-1:0] is_level0_pop;
@@ -90,12 +94,14 @@ for (genvar i = 1; i < LEVEL; i++) begin
 end
 // if i_push, ROOT_TREE will do push
 assign push[ROOT_RPU_ID] = i_push;
-assign push_data[ROOT_RPU_ID] = {{MTW+PTW-TREE_NUM_BITS{1'b0}}, i_push_tree_id};
+assign push_data[ROOT_RPU_ID] = {i_push_tree_id, {MTW+PTW-(PRIORITY_BITS+TREE_NUM_BITS){1'b0}}, i_push_priority};
+
+assign push_data_root = {i_push_tree_id, {MTW+PTW-(PRIORITY_BITS+TREE_NUM_BITS){1'b0}}, i_push_priority};
 
 // pop is for ROOT_TREE_ID
 // i.e. if i_pop is 1 then ROOT_TREE will do pop
 // and generate a pop for a subtree
-assign pop_tree_id = is_level0_pop[0] ? pop_data[0][TREE_NUM_BITS-1:0] : '0;
+assign pop_tree_id = is_level0_pop[0] ? pop_data[0][(MTW+PTW-1) -: TREE_NUM_BITS] : '0;
 assign pop_rpu_id = pop_tree_id & {LEVEL_BITS{1'b1}};
 
 for (genvar i = 1; i < LEVEL; i++) begin

@@ -128,17 +128,17 @@ endfunction
    wire [ADW-1:0]                      child_addr   [0:LEVEL-1];
 
    wire [LEVEL-1:0] pop_TaskFIFO;
-   wire [PTW+TREE_NUM_BITS:0] TaskFIFO_pop_data [0:LEVEL-1];
+   wire [(PTW+MTW)+TREE_NUM_BITS:0] TaskFIFO_pop_data [0:LEVEL-1];
    wire [LEVEL-1:0] TaskFIFO_empty;
    wire [1:0] rpu_state_nxt [0:LEVEL-1];
 
    wire [LEVEL-1:0] rpu_push;
    wire [LEVEL-1:0] rpu_pop;
-   wire [PTW-1:0] rpu_push_data [0:LEVEL-1];
+   wire [(PTW+MTW)-1:0] rpu_push_data [0:LEVEL-1];
    wire [TREE_NUM_BITS-1:0] rpu_treeId [0:LEVEL-1];
 
    wire [LEVEL-1:0] push_TaskFIFO;
-   wire [PTW+TREE_NUM_BITS:0] TaskFIFO_push_data [0:LEVEL-1];
+   wire [(PTW+MTW)+TREE_NUM_BITS:0] TaskFIFO_push_data [0:LEVEL-1];
    wire [LEVEL-1:0] TaskFIFO_full;
    wire [FIFO_WIDTH:0] fifo_counter [0:LEVEL-1]; 
 
@@ -148,10 +148,10 @@ endfunction
    // wire [1:0] rpu_state_nxt_2;
    // wire [1:0] rpu_state_nxt_3;
 
-   wire [PTW+TREE_NUM_BITS:0] TaskFIFO_push_data_0;
-   wire [PTW+TREE_NUM_BITS:0] TaskFIFO_push_data_1;
-   // wire [PTW+TREE_NUM_BITS:0] TaskFIFO_push_data_2;
-   // wire [PTW+TREE_NUM_BITS:0] TaskFIFO_push_data_3;
+   wire [(PTW+MTW)+TREE_NUM_BITS:0] TaskFIFO_push_data_0;
+   wire [(PTW+MTW)+TREE_NUM_BITS:0] TaskFIFO_push_data_1;
+   // wire [(PTW+MTW)+TREE_NUM_BITS:0] TaskFIFO_push_data_2;
+   // wire [(PTW+MTW)+TREE_NUM_BITS:0] TaskFIFO_push_data_3;
 
    assign TaskFIFO_push_data_0 = TaskFIFO_push_data[0];
    assign TaskFIFO_push_data_1 = TaskFIFO_push_data[1];
@@ -163,10 +163,10 @@ endfunction
    // assign rpu_state_nxt_2 = rpu_state_nxt[2];
    // assign rpu_state_nxt_3 = rpu_state_nxt[3];
 
-   wire [PTW-1:0] rpu_push_data_0;
-   wire [PTW-1:0] rpu_push_data_1;
-   // wire [PTW-1:0] rpu_push_data_2;
-   // wire [PTW-1:0] rpu_push_data_3;
+   wire [(PTW+MTW)-1:0] rpu_push_data_0;
+   wire [(PTW+MTW)-1:0] rpu_push_data_1;
+   // wire [(PTW+MTW)-1:0] rpu_push_data_2;
+   // wire [(PTW+MTW)-1:0] rpu_push_data_3;
 
    assign rpu_push_data_0 = rpu_push_data[0];
    assign rpu_push_data_1 = rpu_push_data[1];
@@ -317,6 +317,7 @@ end
    for (i=0;i<LEVEL;i=i+1) begin
       TaskFIFO #(
          .PTW(PTW),
+         .MTW(MTW),
          .TREE_NUM(TREE_NUM),
          .BUF_SIZE(FIFO_SIZE)
       )tf(
@@ -341,6 +342,7 @@ end
 
    TaskDistribute #(
       .PTW(PTW),
+      .MTW(MTW),
       .LEVEL(LEVEL),
       .TREE_NUM(TREE_NUM)
 	)td(

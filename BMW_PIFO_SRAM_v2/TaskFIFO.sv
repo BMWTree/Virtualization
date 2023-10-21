@@ -20,6 +20,7 @@
 
 module TaskFIFO#(
    parameter PTW    = 16,       // Payload data width
+   parameter MTW    = 16,       // Meta data width
    parameter TREE_NUM = 4,
    parameter TREE_NUM_BITS = $clog2(TREE_NUM),
    parameter BUF_SIZE    = 8,
@@ -27,9 +28,9 @@ module TaskFIFO#(
 )(
    input                 rst, clk, wr_en, rd_en,   
    // reset, system clock, write enable and read enable.
-   input [PTW+TREE_NUM_BITS:0]           buf_in,                   
+   input [(PTW+MTW)+TREE_NUM_BITS:0]           buf_in,                   
    // data input to be pushed to buffer
-   output[PTW+TREE_NUM_BITS:0]           buf_out,                  
+   output[(PTW+MTW)+TREE_NUM_BITS:0]           buf_out,                  
    // port to output the data using pop.
    output                buf_empty, buf_full,      
    // buffer empty and full indication 
@@ -37,17 +38,17 @@ module TaskFIFO#(
    // number of data pushed in to buffer   
 );
 
-// buf_in and buf_out here are all PTW+TREE_NUM_BITS+1 bit
+// buf_in and buf_out here are all (PTW+MTW)+TREE_NUM_BITS+1 bit
 // { {1'b(push(1) or pop(0))}, TreeId, PushData(or '0 when pop)}
 
-reg[PTW+TREE_NUM_BITS:0]              buf_rd;
+reg[(PTW+MTW)+TREE_NUM_BITS:0]              buf_rd;
 reg                   buf_empty_last;
 reg                   rd_en_last, wr_en_last;
 reg[BUF_WIDTH :0]    fifo_counter;
 reg[BUF_WIDTH :0]    fifo_counter_nxt;
 reg[BUF_WIDTH-1:0]  rd_ptr, wr_ptr;           // pointer to read and write addresses  
 reg[BUF_WIDTH-1:0]  rd_ptr_nxt, wr_ptr_nxt;           // pointer to read and write addresses  
-reg[PTW+TREE_NUM_BITS:0]              buf_mem[BUF_SIZE -1 : 0]; //  
+reg[(PTW+MTW)+TREE_NUM_BITS:0]              buf_mem[BUF_SIZE -1 : 0]; //  
 
 assign buf_empty = (fifo_counter==0);   // Checking for whether buffer is empty or not
 assign buf_full = (fifo_counter== BUF_SIZE);  //Checking for whether buffer is full or not

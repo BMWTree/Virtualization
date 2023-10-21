@@ -35,13 +35,16 @@ module TC();
 // 4 LEVEL push to full and pop to empty
 
 
-parameter PTW = 16;
-parameter MTW = 0;
-parameter CTW = 16;
+
 parameter LEVEL = 4;
 parameter TREE_NUM = 4;
 parameter FIFO_SIZE = 2048;
 parameter TREE_NUM_BITS = $clog2(TREE_NUM);
+parameter PRIORITY_NUM    = 16;
+parameter PRIORITY_BITS   = $clog2(PRIORITY_NUM);
+parameter PTW = 16;
+parameter MTW = TREE_NUM_BITS;
+parameter CTW = 16;
 
 reg            clk;
 reg            arst_n;
@@ -52,6 +55,7 @@ reg push;
 reg pop;
 reg [(MTW+PTW)-1:0] push_data;
 reg [TREE_NUM_BITS-1:0]      push_tree_id;
+reg [PRIORITY_BITS-1:0]      push_priority;
 reg [TREE_NUM_BITS-1:0]      pop_tree_id;
 integer        data_gen [49:0];
 integer        i, j;
@@ -68,12 +72,14 @@ TASK_GENERATOR
    .CTW   (CTW),
    .LEVEL (LEVEL),
    .TREE_NUM (TREE_NUM),
+   .PRIORITY_NUM (PRIORITY_NUM),
    .FIFO_SIZE (FIFO_SIZE)
 ) u_TASK_GENERATOR (
    .i_clk       ( clk            ),
    .i_arst_n    ( arst_n         ),
    
    .i_push_tree_id   ( push_tree_id        ),
+   .i_push_priority   ( push_priority        ),
    .i_push      ( push           ),
    .i_push_data ( push_data      ),
    
@@ -111,6 +117,7 @@ begin
   push   = 1'b0;
   pop    = 1'b0;
   push_tree_id = '0;
+  push_priority = '0;
  
   #400;
   arst_n = 1'b1;
@@ -124,6 +131,7 @@ begin
         push = 1'b1;
         push_data = 4096 * i + j;
         push_tree_id = i;
+        push_priority = i;
       join
     end
   end
@@ -134,6 +142,7 @@ begin
       push = 1'b0;
       push_data = 0;
       push_tree_id = 0;
+      push_priority = 0;
   join
 
   // pop all
@@ -145,6 +154,7 @@ begin
         push = 1'b0;
         push_data = 0;
         push_tree_id = 0;
+        push_priority = 0;
       join
     end
   end
@@ -155,6 +165,7 @@ begin
       push = 1'b0;
       push_data = 0;
       push_tree_id = 0;
+      push_priority = 0;
   join
 
   #5000;   

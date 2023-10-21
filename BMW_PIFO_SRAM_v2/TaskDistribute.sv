@@ -3,6 +3,7 @@
 module TaskDistribute 
 #(
 	parameter PTW    = 16,       // Payload data width
+	parameter MTW    = 16,       // Meta data width
 	parameter LEVEL  = 4,         // Sub-tree level ie RPU num
     parameter LEVEL_BITS = $clog2(LEVEL),
 	parameter TREE_NUM = 4,
@@ -16,14 +17,14 @@ module TaskDistribute
     // TaskFIFO
     output [LEVEL-1:0] o_pop_TaskFIFO,
     // { {1'b(push(1) or pop(0))}, TreeId, PushData(or '0 when pop)}
-    input [PTW+TREE_NUM_BITS:0] i_TaskFIFO_data [0:LEVEL-1], 
+    input [(PTW+MTW)+TREE_NUM_BITS:0] i_TaskFIFO_data [0:LEVEL-1], 
     input [LEVEL-1:0] i_TaskFIFO_empty,
 
     // output push pop task
     output [LEVEL-1:0] o_rpu_push,
     output [LEVEL-1:0] o_rpu_pop,
     output [TREE_NUM_BITS-1:0] o_rpu_treeId [0:LEVEL-1],
-    output [PTW-1:0] o_rpu_push_data [0:LEVEL-1]
+    output [(PTW+MTW)-1:0] o_rpu_push_data [0:LEVEL-1]
 );
 
 localparam  ST_IDLE     = 2'b00,
@@ -32,9 +33,9 @@ localparam  ST_IDLE     = 2'b00,
             ST_WB       = 2'b10;
 
 // { 1'b(valid), {1'b(push(1) or pop(0))}, TreeId, PushData(or '0 when pop)}
-reg [PTW+TREE_NUM_BITS+1:0] TaskHead_last [0:LEVEL-1];
-reg [PTW+TREE_NUM_BITS+1:0] TaskHead [0:LEVEL-1];
-reg [PTW+TREE_NUM_BITS+1:0] TaskHead_after [0:LEVEL-1];
+reg [(PTW+MTW)+TREE_NUM_BITS+1:0] TaskHead_last [0:LEVEL-1];
+reg [(PTW+MTW)+TREE_NUM_BITS+1:0] TaskHead [0:LEVEL-1];
+reg [(PTW+MTW)+TREE_NUM_BITS+1:0] TaskHead_after [0:LEVEL-1];
 reg [LEVEL-1:0] pop_TaskFIFO_last;
 reg [LEVEL-1:0] i_TaskFIFO_empty_last;
 
@@ -42,12 +43,12 @@ wire [LEVEL-1:0] TaskHead_valid;
 wire [LEVEL-1:0] TaskHead_after_valid;
 wire [LEVEL-1:0] TaskHead_type; // 1 is push 0 is pop
 wire [TREE_NUM_BITS-1:0] TaskHead_treeId [0:LEVEL-1];
-wire [PTW-1:0] TaskHead_PushData [0:LEVEL-1];
+wire [(PTW+MTW)-1:0] TaskHead_PushData [0:LEVEL-1];
 
 reg [LEVEL-1:0] rpu_push, rpu_push_nxt, rpu_push_new, rpu_push_new_nxt, rpu_push_inherit, rpu_push_inherit_nxt;
 reg [LEVEL-1:0] rpu_pop, rpu_pop_nxt, rpu_pop_new, rpu_pop_new_nxt, rpu_pop_inherit, rpu_pop_inherit_nxt, rpu_pop_inherit_pre;
 reg [TREE_NUM_BITS-1:0] rpu_treeId [0:LEVEL-1];
-reg [PTW-1:0] rpu_PushData [0:LEVEL-1];
+reg [(PTW+MTW)-1:0] rpu_PushData [0:LEVEL-1];
 
 // RPU state
 reg [1:0] rpu_state [0:LEVEL-1];
@@ -69,14 +70,14 @@ reg [LEVEL_BITS-1:0] rpu_level_1;
 // reg [LEVEL_BITS-1:0] rpu_level_2;
 // reg [LEVEL_BITS-1:0] rpu_level_3;
 
-reg [PTW-1:0] rpu_PushData_0;
-reg [PTW-1:0] rpu_PushData_1;
-// reg [PTW-1:0] rpu_PushData_2;
-// reg [PTW-1:0] rpu_PushData_3;
-// reg [PTW-1:0] rpu_PushData_4;
-// reg [PTW-1:0] rpu_PushData_5;
-// reg [PTW-1:0] rpu_PushData_6;
-// reg [PTW-1:0] rpu_PushData_7;
+reg [(PTW+MTW)-1:0] rpu_PushData_0;
+reg [(PTW+MTW)-1:0] rpu_PushData_1;
+// reg [(PTW+MTW)-1:0] rpu_PushData_2;
+// reg [(PTW+MTW)-1:0] rpu_PushData_3;
+// reg [(PTW+MTW)-1:0] rpu_PushData_4;
+// reg [(PTW+MTW)-1:0] rpu_PushData_5;
+// reg [(PTW+MTW)-1:0] rpu_PushData_6;
+// reg [(PTW+MTW)-1:0] rpu_PushData_7;
 
 
 assign rpu_state_0 = rpu_state[0];
@@ -316,11 +317,11 @@ for (genvar i = 0; i < LEVEL; i++) begin
 end
 
 for (genvar i = 0; i < LEVEL; i++) begin    
-    assign TaskHead_valid[i] = TaskHead[i][PTW+TREE_NUM_BITS+1];
-    assign TaskHead_after_valid[i] = TaskHead_after[i][PTW+TREE_NUM_BITS+1];
-    assign TaskHead_type[i] = TaskHead[i][PTW+TREE_NUM_BITS];
-    assign TaskHead_treeId[i] = TaskHead[i][PTW+:TREE_NUM_BITS];
-    assign TaskHead_PushData[i] = TaskHead[i][0+:PTW];
+    assign TaskHead_valid[i] = TaskHead[i][(PTW+MTW)+TREE_NUM_BITS+1];
+    assign TaskHead_after_valid[i] = TaskHead_after[i][(PTW+MTW)+TREE_NUM_BITS+1];
+    assign TaskHead_type[i] = TaskHead[i][(PTW+MTW)+TREE_NUM_BITS];
+    assign TaskHead_treeId[i] = TaskHead[i][(PTW+MTW)+:TREE_NUM_BITS];
+    assign TaskHead_PushData[i] = TaskHead[i][0+:(PTW+MTW)];
 end
 
 for (genvar i = 0; i < LEVEL; i++) begin
@@ -366,7 +367,7 @@ end
 
 // ============================ output assign =======================================
 
-wire [PTW-1:0] TaskHead_PushData_1;
+wire [(PTW+MTW)-1:0] TaskHead_PushData_1;
 assign TaskHead_PushData_1 = TaskHead_PushData[1];
 
 for (genvar i = 0; i < LEVEL; i++) begin
