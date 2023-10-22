@@ -197,9 +197,8 @@ module PIFO_SRAM_TOP
             .o_is_level0_pop ( is_level0_pop[i] ),
 
             .o_read_addr     ( read_addr    [i] ),
-            .o_write_addr    ( write_addr   [i] ),
-            .o_state_nxt     ( rpu_state_nxt[i] )	
-            );
+            .o_write_addr    ( write_addr   [i] )
+        );
     end
     
     assign tree_id_dn_0 = tree_id_dn[0];
