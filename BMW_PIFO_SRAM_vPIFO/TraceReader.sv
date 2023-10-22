@@ -1,33 +1,24 @@
 `timescale 1ns / 10ps
 
 
-
 `define MAX2(v1, v2) ((v1) > (v2) ? (v1) : (v2))
 
 
 module TRACE_READER
 #(
+    parameter PTW             = 16, // Payload data width
+    parameter MTW             = TREE_NUM_BITS, // Metdata width should not less than TREE_NUM_BITS, cause tree_id will be placed in MTW
+    parameter CTW             = 10, // Counter width
+    parameter LEVEL           = 4, // Sub-tree level
+    parameter TREE_NUM        = 4,
+    parameter FIFO_SIZE       = 8,
     parameter IDLECYCLE    = 1024, // idle cycles
-    parameter IDLECYCLE_BITS = $clog2(IDLECYCLE), // idle cycles
-    parameter PRIORITY_NUM    = 16,
-    parameter PRIORITY_BITS   = $clog2(PRIORITY_NUM),
-    parameter TREE_NUM = 4,
-	parameter TREE_NUM_BITS = $clog2(TREE_NUM),
-    parameter PTW    = 16, // Payload data width, should not less than PRIORITY_BITS, cause priority will be placed in PTW
-    parameter MTW    = TREE_NUM_BITS, // Metdata width should not less than TREE_NUM_BITS, cause tree_id will be placed in MTW
-    parameter CTW    = 10,       // Counter width
-	parameter TRACE_DATA_BITS = `MAX2(IDLECYCLE, (PRIORITY_BITS+TREE_NUM_BITS+MTW+PTW)) + 1,
-    parameter LEVEL  = 4,         // Sub-tree level
-    parameter ROOT_TREE_ID = 0,
-    parameter ROOT_RPU_ID = 0,
-    parameter FIFO_SIZE    = 8,
-    parameter FIFO_WIDTH    = $clog2(FIFO_SIZE),
-    parameter LEVEL_BITS = $clog2(LEVEL),
-    parameter LEVEL_MASK ={LEVEL{1'b1}},    // Tree level
-    parameter A_TREE ={LEVEL{1'b1}},
-    parameter SRAM_ADW    = $clog2(TREE_NUM/LEVEL) + LEVEL,       // SRAM_Address width
-   
-    parameter ADW    = LEVEL       // Address width in a level
+
+    localparam FIFO_WIDTH       = $clog2(FIFO_SIZE),
+    localparam LEVEL_BITS       = $clog2(LEVEL),
+    localparam TREE_NUM_BITS    = $clog2(TREE_NUM),
+    localparam IDLECYCLE_BITS   = $clog2(IDLECYCLE), // idle cycles
+	localparam TRACE_DATA_BITS = `MAX2(IDLECYCLE, (PTW+TREE_NUM_BITS+MTW+PTW)) + 1,
 )(
    // Clock and Reset
     input                            i_clk,
@@ -37,7 +28,7 @@ module TRACE_READER
 
     // Push and Pop port to the whole PIFO tree
     output                           o_push,
-    output [PRIORITY_BITS-1:0]       o_push_priority,
+    output [PTW-1:0]       o_push_priority,
     output [TREE_NUM_BITS-1:0]       o_push_tree_id,
     output [(MTW+PTW)-1:0]           o_push_data,
     
@@ -57,13 +48,13 @@ module TRACE_READER
 reg[IDLECYCLE_BITS+1:0] idle_cycle_counter;
 reg push;
 reg pop;
-reg [PRIORITY_BITS-1:0] push_priority;
+reg [PTW-1:0] push_priority;
 reg [TREE_NUM_BITS-1:0] push_tree_id;
 reg [(MTW+PTW)-1:0] push_data;
 
 wire [IDLECYCLE_BITS+1:0] i_idle_cycle_counter;
 wire i_push;
-wire [PRIORITY_BITS-1:0] i_push_priority;
+wire [PTW-1:0] i_push_priority;
 wire [TREE_NUM_BITS-1:0] i_push_tree_id;
 wire [(MTW+PTW)-1:0] i_push_data;
 

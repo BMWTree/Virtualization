@@ -22,9 +22,10 @@ module TaskFIFO#(
    parameter PTW    = 16,       // Payload data width
    parameter MTW    = 16,       // Meta data width
    parameter TREE_NUM = 4,
-   parameter TREE_NUM_BITS = $clog2(TREE_NUM),
    parameter BUF_SIZE    = 8,
-   parameter BUF_WIDTH    = $clog2(BUF_SIZE)
+
+   localparam TREE_NUM_BITS = $clog2(TREE_NUM),
+   localparam BUF_WIDTH    = $clog2(BUF_SIZE)
 )(
    input                 rst, clk, wr_en, rd_en,   
    // reset, system clock, write enable and read enable.

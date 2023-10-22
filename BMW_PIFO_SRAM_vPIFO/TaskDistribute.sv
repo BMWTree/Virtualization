@@ -5,26 +5,28 @@ module TaskDistribute
 	parameter PTW    = 16,       // Payload data width
 	parameter MTW    = 16,       // Meta data width
 	parameter LEVEL  = 4,         // Sub-tree level ie RPU num
-    parameter LEVEL_BITS = $clog2(LEVEL),
 	parameter TREE_NUM = 4,
-	parameter TREE_NUM_BITS = $clog2(TREE_NUM)
-)
-(
+
+
+    localparam LEVEL_BITS = $clog2(LEVEL),
+	localparam TREE_NUM_BITS = $clog2(TREE_NUM),
+	localparam TaskFIFO_DATA_BITS = (PTW+MTW)+TREE_NUM_BITS
+)(
     // Clock and Reset
-    input i_clk,         // I - Clock
-    input i_arst_n,      // I - Active Low Async Reset
+    input                           i_clk,         // I - Clock
+    input                           i_arst_n,      // I - Active Low Async Reset
 
     // TaskFIFO
-    output [LEVEL-1:0] o_pop_TaskFIFO,
+    output [LEVEL-1:0]              o_pop_TaskFIFO,
     // { {1'b(push(1) or pop(0))}, TreeId, PushData(or '0 when pop)}
-    input [(PTW+MTW)+TREE_NUM_BITS:0] i_TaskFIFO_data [0:LEVEL-1], 
-    input [LEVEL-1:0] i_TaskFIFO_empty,
+    input [TaskFIFO_DATA_BITS:0]    i_TaskFIFO_data [0:LEVEL-1], 
+    input [LEVEL-1:0]               i_TaskFIFO_empty,
 
     // output push pop task
-    output [LEVEL-1:0] o_rpu_push,
-    output [LEVEL-1:0] o_rpu_pop,
-    output [TREE_NUM_BITS-1:0] o_rpu_treeId [0:LEVEL-1],
-    output [(PTW+MTW)-1:0] o_rpu_push_data [0:LEVEL-1]
+    output [LEVEL-1:0]              o_rpu_push,
+    output [LEVEL-1:0]              o_rpu_pop,
+    output [TREE_NUM_BITS-1:0]      o_rpu_treeId [0:LEVEL-1],
+    output [(PTW+MTW)-1:0]          o_rpu_push_data [0:LEVEL-1]
 );
 
 localparam  ST_IDLE     = 2'b00,
@@ -45,8 +47,21 @@ wire [LEVEL-1:0] TaskHead_type; // 1 is push 0 is pop
 wire [TREE_NUM_BITS-1:0] TaskHead_treeId [0:LEVEL-1];
 wire [(PTW+MTW)-1:0] TaskHead_PushData [0:LEVEL-1];
 
-reg [LEVEL-1:0] rpu_push, rpu_push_nxt, rpu_push_new, rpu_push_new_nxt, rpu_push_inherit, rpu_push_inherit_nxt;
-reg [LEVEL-1:0] rpu_pop, rpu_pop_nxt, rpu_pop_new, rpu_pop_new_nxt, rpu_pop_inherit, rpu_pop_inherit_nxt, rpu_pop_inherit_pre;
+reg [LEVEL-1:0] rpu_push, 
+                rpu_push_nxt, 
+                rpu_push_new, 
+                rpu_push_new_nxt, 
+                rpu_push_inherit, 
+                rpu_push_inherit_nxt;
+
+reg [LEVEL-1:0] rpu_pop,
+                rpu_pop_nxt,
+                rpu_pop_new,
+                rpu_pop_new_nxt,
+                rpu_pop_inherit,
+                rpu_pop_inherit_nxt,
+                rpu_pop_inherit_pre;
+
 reg [TREE_NUM_BITS-1:0] rpu_treeId [0:LEVEL-1];
 reg [(PTW+MTW)-1:0] rpu_PushData [0:LEVEL-1];
 
@@ -343,15 +358,18 @@ end
 
 for (genvar i = 2; i < LEVEL; i++) begin
     assign rpu_push_new_nxt[i] = (rpu_state_mid[i] != ST_IDLE) ? 1'b0 : TaskHead_valid[i] ? (TaskHead_type[i] == 1'b1) : 1'b0;
+    
     assign rpu_pop_new_nxt[i] = (rpu_state_mid[i] != ST_IDLE || !rpu_ready_nxt[i-1]/*rpu_state_mid[i-1] != ST_IDLE*/ || (rpu_pop_nxt[i-1] | rpu_push_nxt[i-1])) ? 1'b0 : TaskHead_valid[i] ? (TaskHead_type[i] == 1'b0) : 1'b0;
 end
 
 assign rpu_push_new_nxt[1] = (rpu_state_mid[1] != ST_IDLE) ? 1'b0 : TaskHead_valid[1] ? (TaskHead_type[1] == 1'b1) : 1'b0;
+
 assign rpu_pop_new_nxt[1] = (rpu_state_mid[1] != ST_IDLE || !rpu_ready_nxt[0]/*rpu_state_mid[0] != ST_IDLE*/ || (rpu_pop_inherit_nxt[0] | rpu_push_inherit_nxt[0])) ? 1'b0 : TaskHead_valid[1] ? (TaskHead_type[1] == 1'b0) : 1'b0;
 
 assign rpu_push_new_nxt[0] = (rpu_state_mid[0] != ST_IDLE) ? 1'b0 
 : (rpu_pop_new_nxt[1] == 1'b1) ? 1'b0 
 : TaskHead_valid[0] ? (TaskHead_type[0] == 1'b1) : 1'b0;
+
 assign rpu_pop_new_nxt[0] = (rpu_state_mid[0] != ST_IDLE) ? 1'b0 
 : (rpu_pop_new_nxt[1] == 1'b1) ? 1'b0 
 : (!rpu_ready_nxt[LEVEL-1] /*rpu_state_mid[LEVEL-1] != ST_IDLE*/ || (rpu_pop_nxt[LEVEL-1] | rpu_push_nxt[LEVEL-1])) ? 1'b0 

@@ -40,8 +40,6 @@ parameter LEVEL = 4;
 parameter TREE_NUM = 4;
 parameter FIFO_SIZE = 2048;
 parameter TREE_NUM_BITS = $clog2(TREE_NUM);
-parameter PRIORITY_NUM    = 16;
-parameter PRIORITY_BITS   = $clog2(PRIORITY_NUM);
 parameter PTW = 16;
 parameter MTW = TREE_NUM_BITS;
 parameter CTW = 16;
@@ -55,7 +53,7 @@ reg push;
 reg pop;
 reg [(MTW+PTW)-1:0] push_data;
 reg [TREE_NUM_BITS-1:0]      push_tree_id;
-reg [PRIORITY_BITS-1:0]      push_priority;
+reg [PTW-1:0]      push_priority;
 reg [TREE_NUM_BITS-1:0]      pop_tree_id;
 integer        data_gen [49:0];
 integer        i, j;
@@ -72,7 +70,6 @@ TASK_GENERATOR
    .CTW   (CTW),
    .LEVEL (LEVEL),
    .TREE_NUM (TREE_NUM),
-   .PRIORITY_NUM (PRIORITY_NUM),
    .FIFO_SIZE (FIFO_SIZE)
 ) u_TASK_GENERATOR (
    .i_clk       ( clk            ),
