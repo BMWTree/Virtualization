@@ -27,9 +27,11 @@ module PIFO_SRAM
 
     localparam LEVEL_BITS       = $clog2(LEVEL),
     localparam TREE_NUM_BITS    = $clog2(TREE_NUM),
-    localparam SRAM_ADW         = $clog2(TREE_NUM/LEVEL) + LEVEL, // SRAM_Address width
+    localparam TREE_SIZE_BITS   = LEVEL,
+    localparam SRAM_ADW_HI_BITS = $clog2(TREE_NUM/LEVEL), // SRAM_Address high part width
+    localparam SRAM_ADW         = $clog2(TREE_NUM/LEVEL) + TREE_SIZE_BITS, // SRAM_Address width
     localparam ADW              = LEVEL-1, // Address width in a level
-    localparam TREE_SIZE        = {LEVEL{1'b1}}
+    localparam TREE_SIZE        = {TREE_SIZE_BITS{1'b1}}
 )(
     // Clock and Reset
     input                          i_clk,         // I - Clock
@@ -141,9 +143,9 @@ module PIFO_SRAM
             cur_level <= '0;
             cur_tree_id <= '0;
         end else begin
-            case (fsm[1:0])
+            unique case (fsm[1:0])
                 ST_IDLE: begin
-                case ({i_push, i_pop})
+                unique case ({i_push, i_pop})
                     2'b00,
                     2'b11: begin // Not allow concurrent read and write
                     fsm[1:0]    <= ST_IDLE;
@@ -170,7 +172,7 @@ module PIFO_SRAM
                 end
 
                 ST_PUSH: begin       	
-                case ({i_push, i_pop})
+                unique case ({i_push, i_pop})
                     2'b00,
                     2'b11: begin 
                         fsm[1:0]    <= ST_IDLE;
@@ -205,7 +207,7 @@ module PIFO_SRAM
                 end		
                 
                 ST_WB: begin		       
-                    case ({i_push, i_pop})
+                    unique case ({i_push, i_pop})
                     2'b00,
                     2'b11: begin 
                         fsm[1:0]    <= ST_IDLE;
@@ -239,19 +241,19 @@ module PIFO_SRAM
     //-----------------------------------------------------------------------------
     logic [SRAM_ADW-1:0] read_offset;
     logic [SRAM_ADW-1:0] write_offset;
-    logic [LEVEL-1:0] read_lo;
-    logic [LEVEL-1:0] write_lo;
-    logic [TREE_NUM_BITS-LEVEL_BITS-1:0] read_hi;
-    logic [TREE_NUM_BITS-LEVEL_BITS-1:0] write_hi;
+    logic [TREE_SIZE_BITS-1:0] read_lo;
+    logic [TREE_SIZE_BITS-1:0] write_lo;
+    logic [SRAM_ADW_HI_BITS-1:0] read_hi;
+    logic [SRAM_ADW_HI_BITS-1:0] write_hi;
 
-    assign read_hi = i_tree_id >> LEVEL_BITS;
-    assign write_hi = cur_tree_id >> LEVEL_BITS;
+    assign read_hi = i_tree_id >> $clog2(TREE_SIZE_BITS);
+    assign write_hi = cur_tree_id >> $clog2(TREE_SIZE_BITS);
 
 
     always_comb begin
         read_lo = '0;
         for(int i=0; i<LEVEL-1; ++i)begin
-            if(i < (i_tree_id & {LEVEL_BITS{1'b1}}))
+            if(i < (i_tree_id & {$clog2(TREE_SIZE_BITS){1'b1}}))
                 read_lo = (1 << ((i+i_level+1) & {LEVEL_BITS{1'b1}})) | read_lo;
         end
 
@@ -261,7 +263,7 @@ module PIFO_SRAM
     always_comb begin
         write_lo = '0;
         for(int i=0; i<LEVEL-1; ++i)begin
-            if(i < (cur_tree_id & {LEVEL_BITS{1'b1}}))
+            if(i < (cur_tree_id & {$clog2(TREE_SIZE_BITS){1'b1}}))
                 write_lo = (1 << ((i+cur_level+1) & {LEVEL_BITS{1'b1}})) | write_lo;
         end
 

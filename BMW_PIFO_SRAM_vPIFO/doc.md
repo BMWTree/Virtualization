@@ -48,15 +48,41 @@
 
 - ADW
 
-> 在 BMW-Tree 每层内部寻址所需的最大地址宽度，例如 3 层的 BMW-Tree 每层的数据量为 1, 2, 4 因此最后一层（容量为 4 ）只需要 2 位寻址。
+> 在 BMW-Tree 每层内部寻址所需的最大地址宽度。
+>
+> 例如 3 层的 BMW-Tree （2 叉）每层的数据量为 1, 2, 4 因此最后一层（容量为 4 ）只需要 2 位寻址。（LEVEL-1）
+>
+> 例如 3 层的 BMW-Tree （4 叉）每层的数据量为 1, 4, 16 因此最后一层（容量为 16 ）只需要 4 位寻址。（2*(LEVEL-1)）
+>
+> 例如 3 层的 BMW-Tree （8 叉）每层的数据量为 1, 8, 64 因此最后一层（容量为 64 ）只需要 6 位寻址。（3*(LEVEL-1)）
 
 - TREE_SIZE
 
-> 一棵 BMW-Tree 的容量大小，TREE_SIZE 刚好是 2^LEVEL^ -1 （对于二叉的情况）。
+> 一棵 BMW-Tree 的容量大小。
+>
+> 对于 2 叉的情况，TREE_SIZE 刚好是 2^LEVEL^ -1。
+>
+> 对于 4 叉的情况，TREE_SIZE 刚好是 (4^LEVEL^ -1) / 3。
+>
+> 对于 8 叉的情况，TREE_SIZE 刚好是 (8^LEVEL^ -1) / 7。
+
+- TREE_SIZE_BITS
+
+> TREE_SIZE 取 log 然后适当放大，即 ADW+1。
+>
+> TREE_SIZE 刚好是 2^LEVEL^ -1 （对于 2 叉的情况）取 log 约为 LEVEL。
+>
+> TREE_SIZE 刚好是 (4^LEVEL^ -1) / 3 （对于 4 叉的情况）取 log 约为 2*LEVEL-1。
+>
+> TREE_SIZE 刚好是 (8^LEVEL^ -1) / 7（对于 8 叉的情况）取 log 约为 3*LEVEL-2。
 
 - SRAM_ADW
 
-> SRAM 的地址宽度（SRAM 的容量是多棵 BMW-Tree 拼接起来的，假设 BMW-Tree 的数目是 SRAM 数目的倍数，整个系统中有 LEVEL 个 SRAM）。在设计中，所有 SRAM 大小一样，因此每个 SRAM 的容量为 TREE_NUM * TREE_SIZE / LEVEL。TREE_SIZE 刚好是 2^LEVEL^ -1 （对于二叉的情况），对上式取 log 即得到 SRAM 的地址宽度。
+> SRAM 的地址宽度（SRAM 的容量是多棵 BMW-Tree 拼接起来的，假设 BMW-Tree 的数目是 SRAM 数目的倍数，整个系统中有 LEVEL 个 SRAM）。在设计中，所有 SRAM 大小一样，因此每个 SRAM 的容量为 TREE_NUM * TREE_SIZE / LEVEL ，对上式取 log 即得到 SRAM 的地址宽度（取 log 后为 `log(TREE_NUM / LEVEL) + TREE_SIZE_BITS`）。
+
+- SRAM_ADW_HI_BITS
+
+> SRAM 的地址宽度的高位部分，即 `log(TREE_NUM / LEVEL)`。
 
 - TaskFIFO_DATA_BITS
 
