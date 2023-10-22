@@ -64,8 +64,8 @@ module PIFO_SRAM
     input  [ADW-1:0]               i_my_addr,
     output [ADW-1:0]               o_child_addr,
 
-    input [$clog2(LEVEL)-1:0]      i_level,
-    output [$clog2(LEVEL)-1:0]     o_level,
+    input [LEVEL_BITS-1:0]      i_level,
+    output [LEVEL_BITS-1:0]     o_level,
     output                         o_is_level0_pop,
 
     output [SRAM_ADW-1:0]          o_read_addr,
@@ -113,7 +113,7 @@ module PIFO_SRAM
     reg [ADW-1:0]         child_addr;
 
     // curent level ie write_level
-    reg [$clog2(LEVEL)-1:0] cur_level;
+    reg [LEVEL_BITS-1:0] cur_level;
     reg [TREE_NUM_BITS-1:0] cur_tree_id;
     
     
@@ -246,15 +246,15 @@ module PIFO_SRAM
     logic [SRAM_ADW_HI_BITS-1:0] read_hi;
     logic [SRAM_ADW_HI_BITS-1:0] write_hi;
 
-    assign read_hi = i_tree_id >> $clog2(TREE_SIZE_BITS);
-    assign write_hi = cur_tree_id >> $clog2(TREE_SIZE_BITS);
+    assign read_hi = i_tree_id / LEVEL;
+    assign write_hi = cur_tree_id / LEVEL;
 
 
     always_comb begin
         read_lo = '0;
         for(int i=0; i<LEVEL-1; ++i)begin
-            if(i < (i_tree_id & {$clog2(TREE_SIZE_BITS){1'b1}}))
-                read_lo = (1 << ((i+i_level+1) & {LEVEL_BITS{1'b1}})) | read_lo;
+            if(i < (i_tree_id % LEVEL))
+                read_lo = (1 << ((i+i_level+1) % LEVEL)) | read_lo;
         end
 
         read_offset = read_hi * TREE_SIZE + read_lo;
@@ -263,8 +263,8 @@ module PIFO_SRAM
     always_comb begin
         write_lo = '0;
         for(int i=0; i<LEVEL-1; ++i)begin
-            if(i < (cur_tree_id & {$clog2(TREE_SIZE_BITS){1'b1}}))
-                write_lo = (1 << ((i+cur_level+1) & {LEVEL_BITS{1'b1}})) | write_lo;
+            if(i < (cur_tree_id % LEVEL))
+                write_lo = (1 << ((i+cur_level+1) % LEVEL)) | write_lo;
         end
 
         write_offset = write_hi * TREE_SIZE + write_lo;

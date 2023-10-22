@@ -36,8 +36,8 @@ module TC();
 
 
 
-parameter LEVEL = 4;
-parameter TREE_NUM = 4;
+parameter LEVEL = 5;
+parameter TREE_NUM = 5;
 parameter FIFO_SIZE = 2048;
 parameter TREE_NUM_BITS = $clog2(TREE_NUM);
 parameter PTW = 16;

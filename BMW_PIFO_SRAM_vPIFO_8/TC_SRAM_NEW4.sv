@@ -39,8 +39,8 @@ parameter PTW = 16;
 parameter MTW = 0;
 parameter CTW = 16;
 parameter LEVEL = 2;
-parameter TREE_NUM = 4;
-parameter FIFO_SIZE = 2048;
+parameter TREE_NUM = 6;
+parameter FIFO_SIZE = 2048 * 1024;
 parameter TREE_NUM_BITS = $clog2(TREE_NUM);
 
 reg            clk;
@@ -106,8 +106,8 @@ always #4 begin clk = ~clk; end
 
 assign push_data_0 = push_data[0];
 assign push_data_1 = push_data[1];
-// assign push_data_2 = push_data[2];
-// assign push_data_3 = push_data[3];
+assign push_data_2 = push_data[2];
+assign push_data_3 = push_data[3];
 // assign push_data_4 = push_data[4];
 // assign push_data_5 = push_data[5];
 // assign push_data_6 = push_data[6];
@@ -115,8 +115,8 @@ assign push_data_1 = push_data[1];
 
 assign pop_data_0 = pop_data[0];
 assign pop_data_1 = pop_data[1];
-// assign pop_data_2 = pop_data[2];
-// assign pop_data_3 = pop_data[3];
+assign pop_data_2 = pop_data[2];
+assign pop_data_3 = pop_data[3];
 // assign pop_data_4 = pop_data[4];
 // assign pop_data_5 = pop_data[5];
 // assign pop_data_6 = pop_data[6];
@@ -199,7 +199,7 @@ begin
     end
   join
 
-  #500000;   
+  #5000;   
   $stop;
 
   end

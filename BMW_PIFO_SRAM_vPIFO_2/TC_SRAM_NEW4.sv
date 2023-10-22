@@ -38,9 +38,9 @@ module TC();
 parameter PTW = 16;
 parameter MTW = 0;
 parameter CTW = 16;
-parameter LEVEL = 4;
-parameter TREE_NUM = 4;
-parameter FIFO_SIZE = 2048;
+parameter LEVEL = 5;
+parameter TREE_NUM = 10;
+parameter FIFO_SIZE = 2048 * 1024;
 parameter TREE_NUM_BITS = $clog2(TREE_NUM);
 
 reg            clk;
@@ -61,7 +61,7 @@ reg [PTW-1:0]      push_data_0;
 reg [PTW-1:0]      push_data_1;
 reg [PTW-1:0]      push_data_2;
 reg [PTW-1:0]      push_data_3;
-// reg [PTW-1:0]      push_data_4;
+reg [PTW-1:0]      push_data_4;
 // reg [PTW-1:0]      push_data_5;
 // reg [PTW-1:0]      push_data_6;
 // reg [PTW-1:0]      push_data_7;
@@ -70,7 +70,7 @@ reg [PTW-1:0]      pop_data_0;
 reg [PTW-1:0]      pop_data_1;
 reg [PTW-1:0]      pop_data_2;
 reg [PTW-1:0]      pop_data_3;
-// reg [PTW-1:0]      pop_data_4;
+reg [PTW-1:0]      pop_data_4;
 // reg [PTW-1:0]      pop_data_5;
 // reg [PTW-1:0]      pop_data_6;
 // reg [PTW-1:0]      pop_data_7;
@@ -108,7 +108,7 @@ assign push_data_0 = push_data[0];
 assign push_data_1 = push_data[1];
 assign push_data_2 = push_data[2];
 assign push_data_3 = push_data[3];
-// assign push_data_4 = push_data[4];
+assign push_data_4 = push_data[4];
 // assign push_data_5 = push_data[5];
 // assign push_data_6 = push_data[6];
 // assign push_data_7 = push_data[7];
@@ -117,7 +117,7 @@ assign pop_data_0 = pop_data[0];
 assign pop_data_1 = pop_data[1];
 assign pop_data_2 = pop_data[2];
 assign pop_data_3 = pop_data[3];
-// assign pop_data_4 = pop_data[4];
+assign pop_data_4 = pop_data[4];
 // assign pop_data_5 = pop_data[5];
 // assign pop_data_6 = pop_data[6];
 // assign pop_data_7 = pop_data[7];
@@ -175,6 +175,29 @@ begin
     end
   join
 
+  // push all for prepare
+  for (i=0; i< 2 ** (LEVEL+1) - 2; i=i+1) begin
+    @ (posedge clk);
+    fork
+      for (integer j = 0; j < LEVEL; j++) begin
+        pop[j] = 1'b0;
+        push[j] = 1'b1;
+        push_data[j] = 4096 * (j+LEVEL) + i;
+        tree_id[j] = (j+LEVEL);
+      end
+    join
+  end
+
+  @ (posedge clk);
+  fork 
+    for (integer j = 0; j < LEVEL; j++) begin
+      pop[j] = 1'b0;
+      push[j] = 1'b0;
+      push_data[j] = 0;
+      tree_id[j] = j;
+    end
+  join
+
   // pop all
   for (i=0; i< 2 ** (LEVEL+1) - 2; i=i+1) begin
     @ (posedge clk);
@@ -199,7 +222,31 @@ begin
     end
   join
 
-  #5000;   
+  // pop all
+  for (i=0; i< 2 ** (LEVEL+1) - 2; i=i+1) begin
+    @ (posedge clk);
+    fork
+      for (integer j = 0; j < LEVEL; j++) begin
+        pop[j] = 1'b1;
+        push[j] = 1'b0;
+        push_data[j] = 0;
+        tree_id[j] = j+LEVEL;
+      end
+    join
+  end
+
+
+  @ (posedge clk);
+  fork 
+    for (integer j = 0; j < LEVEL; j++) begin
+      pop[j] = 1'b0;
+      push[j] = 1'b0;
+      push_data[j] = 0;
+      tree_id[j] = j;
+    end
+  join
+
+  #20000;   
   $stop;
 
   end
