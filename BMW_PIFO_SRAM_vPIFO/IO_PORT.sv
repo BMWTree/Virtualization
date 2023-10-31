@@ -39,7 +39,7 @@ module IO_PORT
     wire [LEVEL-1:0] task_fifo_full;
     wire [LEVEL-1:0] root_id;
 
-    assign root_id = i_tree_id & {LEVEL_BITS{1'b1}};
+    assign root_id = i_tree_id % LEVEL;
 
     for (genvar i = 0; i < LEVEL; i++) begin
         assign tree_id[i] = (root_id == i) ? i_tree_id : '0;

@@ -35,6 +35,7 @@ module PIFO_SRAM_TOP
     localparam TREE_NUM_BITS    = $clog2(TREE_NUM),
     localparam TREE_SIZE_BITS   = LEVEL,
     localparam SRAM_ADW         = $clog2(TREE_NUM/LEVEL) + TREE_SIZE_BITS, // SRAM_Address width
+    localparam TaskFIFO_DATA_BITS = (PTW+MTW)+(TREE_NUM_BITS+TREE_NUM_BITS)+2,
     localparam ADW              = LEVEL-1 // Address width in a level
 )(
     // Clock and Reset
@@ -42,11 +43,13 @@ module PIFO_SRAM_TOP
     input                            i_arst_n,
     
     // Push and Pop port to the whole PIFO tree
-    input [TREE_NUM_BITS-1:0]        i_tree_id [0:LEVEL-1],
+    input [TREE_NUM_BITS-1:0]        i_push_tree_id [0:LEVEL-1],
     input [LEVEL-1:0]                i_push,
     input [(MTW+PTW)-1:0]            i_push_data [0:LEVEL-1],
     
     input [LEVEL-1:0]                i_pop,
+    input [TREE_NUM_BITS-1:0]        i_pop_tree_id [0:LEVEL-1],
+
     output [TREE_NUM_BITS-1:0]       o_tree_id [0:LEVEL-1],
     output [(MTW+PTW)-1:0]           o_pop_data [0:LEVEL-1],
 
@@ -97,7 +100,7 @@ module PIFO_SRAM_TOP
     wire [ADW-1:0]                      child_addr   [0:LEVEL-1];
 
     wire [LEVEL-1:0]                    pop_TaskFIFO;
-    wire [(PTW+MTW)+TREE_NUM_BITS:0]    TaskFIFO_pop_data [0:LEVEL-1];
+    wire [TaskFIFO_DATA_BITS-1:0]       TaskFIFO_pop_data [0:LEVEL-1];
     wire [LEVEL-1:0]                    TaskFIFO_empty;
     wire [1:0]                          rpu_state_nxt [0:LEVEL-1];
 
@@ -107,7 +110,7 @@ module PIFO_SRAM_TOP
     wire [TREE_NUM_BITS-1:0]            rpu_treeId [0:LEVEL-1];
 
     wire [LEVEL-1:0]                    push_TaskFIFO;
-    wire [(PTW+MTW)+TREE_NUM_BITS:0]    TaskFIFO_push_data [0:LEVEL-1];
+    wire [TaskFIFO_DATA_BITS-1:0]       TaskFIFO_push_data [0:LEVEL-1];
     wire [LEVEL-1:0]                    TaskFIFO_full;
     wire [FIFO_WIDTH:0]                 fifo_counter [0:LEVEL-1]; 
 
@@ -118,8 +121,8 @@ module PIFO_SRAM_TOP
     // wire [1:0] rpu_state_nxt_2;
     // wire [1:0] rpu_state_nxt_3;
 
-    wire [(PTW+MTW)+TREE_NUM_BITS:0] TaskFIFO_push_data_0;
-    wire [(PTW+MTW)+TREE_NUM_BITS:0] TaskFIFO_push_data_1;
+    wire [TaskFIFO_DATA_BITS-1:0] TaskFIFO_push_data_0;
+    wire [TaskFIFO_DATA_BITS-1:0] TaskFIFO_push_data_1;
     // wire [(PTW+MTW)+TREE_NUM_BITS:0] TaskFIFO_push_data_2;
     // wire [(PTW+MTW)+TREE_NUM_BITS:0] TaskFIFO_push_data_3;
 
@@ -302,10 +305,8 @@ module PIFO_SRAM_TOP
     end
 
     for (i=0;i<LEVEL;i=i+1) begin
-        assign push_TaskFIFO[i] = (i_push[i] && i_pop[i]) ? 1'b0 : (i_push[i] || i_pop[i]) ? 1'b1 : 0;
-        assign TaskFIFO_push_data[i] = (i_push[i] && i_pop[i]) ? '0 
-        : i_push[i] ? {{1'b1}, i_tree_id[i], i_push_data[i]} 
-        : i_pop[i] ? {{1'b0}, i_tree_id[i], {((MTW+PTW)){1'b0}}} : '0;
+        assign push_TaskFIFO[i] = (i_push[i] || i_pop[i]);
+        assign TaskFIFO_push_data[i] = {i_push[i], i_pop[i], i_push_tree_id[i], i_pop_tree_id[i], i_push_data[i]};
     end
 
     TaskDistribute #(
@@ -313,7 +314,7 @@ module PIFO_SRAM_TOP
         .MTW(MTW),
         .LEVEL(LEVEL),
         .TREE_NUM(TREE_NUM)
-        )td(
+    )td(
         .i_clk(i_clk),
         .i_arst_n(i_arst_n),
 
@@ -328,6 +329,10 @@ module PIFO_SRAM_TOP
     );
 
     endgenerate
+
+    wire [TaskFIFO_DATA_BITS-1:0] TaskFIFO_pop_data_0;
+
+    assign TaskFIFO_pop_data_0 = TaskFIFO_pop_data[0];
 
     //-----------------------------------------------------------------------------
     // Sequential Logic
