@@ -33,7 +33,7 @@ module TRACE_ROM
 // {bit, priority, tree_id, data} or {bit, idle_cycle}
 // bit is used to mark if this entry is a packet
 
-(* rom_style = "block" *) reg [TRACE_DATA_BITS-1:0] mem [0:ROM_SIZE-1];
+reg [TRACE_DATA_BITS-1:0] mem [0:ROM_SIZE-1];
 
 assign o_trace_data = (i_read_en && i_arst_n) ? mem[i_addr] : '0;
 

@@ -3,7 +3,7 @@
 `define MAX2(v1, v2) ((v1) > (v2) ? (v1) : (v2))
 
 module SYN_TOP(
-	input clk, btnC
+	input clk_n, clk_p, btnC
 );
 
 parameter LEVEL = 4;
@@ -42,7 +42,7 @@ parameter TRACE_DATA_BITS = `MAX2(IDLECYCLE_BITS, (PTW+TREE_NUM_BITS+MTW+PTW)) +
 (*mark_debug = "true"*) wire arst_n;
 
 
-assign arst_n = !btnC;
+assign arst_n = btnC;
 
 
 //-----------------------------------------------------------------------------
@@ -124,7 +124,7 @@ TRACE_ROM
    .o_trace_data  ( trace_data )
 );
 
-clk_wiz_0 clk_wiz_0_clk(.clk_in1(clk), .clk_out1(my_clk));
+clk_wiz_0 clk_wiz_0_clk(.clk_in1_n(clk_n), .clk_in1_p(clk_p), .clk_out1(my_clk));
 
 //-----------------------------------------------------------------------------
 // Clocks
