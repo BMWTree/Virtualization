@@ -38,9 +38,9 @@ module TC();
 parameter PTW = 16;
 parameter MTW = 0;
 parameter CTW = 16;
-parameter LEVEL = 2;
-parameter TREE_NUM = 6;
-parameter FIFO_SIZE = 2048 * 1024;
+parameter LEVEL = 4;
+parameter TREE_NUM = 4;
+parameter FIFO_SIZE = 2048;
 parameter TREE_NUM_BITS = $clog2(TREE_NUM);
 
 reg            clk;
@@ -52,10 +52,12 @@ reg [LEVEL-1:0] push;
 reg [LEVEL-1:0] pop;
 reg [PTW-1:0]      push_data [0:LEVEL-1];
 reg [TREE_NUM_BITS-1:0]      tree_id [0:LEVEL-1];
+reg [TREE_NUM_BITS-1:0]      pop_tree_id [0:LEVEL-1];
 integer        data_gen [49:0];
 integer        i;
 wire [PTW-1:0]      pop_data [0:LEVEL-1];
 wire [LEVEL-1:0] task_fifo_full;
+wire [LEVEL-1:0] is_level0_pop;
 
 reg [PTW-1:0]      push_data_0;
 reg [PTW-1:0]      push_data_1;
@@ -90,12 +92,17 @@ PIFO_SRAM_TOP
    .i_clk       ( clk            ),
    .i_arst_n    ( arst_n         ),
    
-   .i_tree_id   ( tree_id        ),
+   .i_push_tree_id   ( tree_id        ),
    .i_push      ( push           ),
    .i_push_data ( push_data      ),
    
    .i_pop       ( pop            ),
+   .i_pop_tree_id   ( tree_id        ),
+
+   .o_tree_id   (pop_tree_id),
    .o_pop_data  ( pop_data       ),
+
+   .o_is_level0_pop  (is_level0_pop),
    .o_task_fifo_full (task_fifo_full)      
 );
 
@@ -199,7 +206,7 @@ begin
     end
   join
 
-  #5000;   
+  #200000;   
   $stop;
 
   end

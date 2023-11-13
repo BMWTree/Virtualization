@@ -59,6 +59,7 @@ integer        data_gen [49:0];
 integer        i, j;
 wire [(MTW+PTW)-1:0]      pop_data;
 wire task_fifo_full;
+wire pop_out;
 
 //-----------------------------------------------------------------------------
 // Instantiations
@@ -83,6 +84,7 @@ TASK_GENERATOR
    .i_pop       ( pop            ),
    .o_pop_tree_id  ( pop_tree_id       ),
    .o_pop_data  ( pop_data       ),
+   .o_pop_out   ( pop_out       ),
    .o_task_fifo_full (task_fifo_full)      
 );
 

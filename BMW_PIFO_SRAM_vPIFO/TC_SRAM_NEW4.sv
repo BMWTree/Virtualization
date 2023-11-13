@@ -52,10 +52,12 @@ reg [LEVEL-1:0] push;
 reg [LEVEL-1:0] pop;
 reg [PTW-1:0]      push_data [0:LEVEL-1];
 reg [TREE_NUM_BITS-1:0]      tree_id [0:LEVEL-1];
+reg [TREE_NUM_BITS-1:0]      pop_tree_id [0:LEVEL-1];
 integer        data_gen [49:0];
 integer        i;
 wire [PTW-1:0]      pop_data [0:LEVEL-1];
 wire [LEVEL-1:0] task_fifo_full;
+wire [LEVEL-1:0] is_level0_pop;
 
 reg [PTW-1:0]      push_data_0;
 reg [PTW-1:0]      push_data_1;
@@ -97,7 +99,10 @@ PIFO_SRAM_TOP
    .i_pop       ( pop            ),
    .i_pop_tree_id   ( tree_id        ),
 
+   .o_tree_id   (pop_tree_id),
    .o_pop_data  ( pop_data       ),
+
+   .o_is_level0_pop  (is_level0_pop),
    .o_task_fifo_full (task_fifo_full)      
 );
 

@@ -13,7 +13,7 @@ module IO_PORT
 
     localparam FIFO_WIDTH       = $clog2(FIFO_SIZE),
     localparam LEVEL_BITS       = $clog2(LEVEL),
-    localparam TREE_NUM_BITS    = $clog2(TREE_NUM),
+    localparam TREE_NUM_BITS    = $clog2(TREE_NUM)
 )(
     // Clock and Reset
     input                            i_clk,

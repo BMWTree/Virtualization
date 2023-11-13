@@ -254,9 +254,9 @@ module PIFO_SRAM_TOP
 
 
     for (i=0;i<LEVEL-1;i=i+1) begin : loop1
-        assign push_up[i+1]      = rpu_push[i+1] : 1'b1 ? push_dn[i];
+        assign push_up[i+1]      = rpu_push[i+1] ? 1'b1 : push_dn[i];
         assign push_data_up[i+1] = rpu_push[i+1] ? rpu_push_data[i+1] : push_data_dn[i];
-        assign pop_up[i+1]       = rpu_pop[i+1] : 1'b1 ? pop_dn[i];
+        assign pop_up[i+1]       = rpu_pop[i+1] ? 1'b1 : pop_dn[i];
         assign pop_data_dn[i]    = (level_wb[i] == (LEVEL - 1)) ? {(MTW+PTW){1'b1}} 
                                     : pop_data_up[i+1]; // 和 level 有关，弄成全一
         assign my_addr[i+1]      = (rpu_push[i+1] | rpu_pop[i+1]) ? '0 : child_addr[i];
@@ -264,9 +264,9 @@ module PIFO_SRAM_TOP
         assign level_up[i+1]     = (rpu_push[i+1] | rpu_pop[i+1]) ? '0 : level_dn[i];
     end
 
-    assign push_up[0]            = rpu_push[0] : 1'b1 ? push_dn[LEVEL-1];
+    assign push_up[0]            = rpu_push[0] ? 1'b1 : push_dn[LEVEL-1];
     assign push_data_up[0]       = rpu_push[0] ? rpu_push_data[0] : push_data_dn[LEVEL-1];
-    assign pop_up[0]             = rpu_pop[0] : 1'b1 ? pop_dn[LEVEL-1];
+    assign pop_up[0]             = rpu_pop[0] ? 1'b1 : pop_dn[LEVEL-1];
     assign pop_data_dn[LEVEL-1]  = (level_wb[LEVEL-1] == (LEVEL-1)) ? {(MTW+PTW){1'b1}} 
                                     : pop_data_up[0]; // 和 level 有关，弄成全一
     assign my_addr[0]            = (rpu_push[0] | rpu_pop[0]) ? '0 : child_addr[LEVEL-1];
