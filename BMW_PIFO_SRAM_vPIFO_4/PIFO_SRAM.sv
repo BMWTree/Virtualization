@@ -28,8 +28,8 @@ module PIFO_SRAM
     localparam LEVEL_BITS       = $clog2(LEVEL),
     localparam TREE_NUM_BITS    = $clog2(TREE_NUM),
     localparam TREE_SIZE_BITS   = 2*LEVEL-1,
-    localparam SRAM_ADW_HI_BITS = $clog2(TREE_NUM/LEVEL), // SRAM_Address high part width
-    localparam SRAM_ADW         = $clog2(TREE_NUM/LEVEL) + TREE_SIZE_BITS, // SRAM_Address width
+    localparam SRAM_ADW_HI_BITS = $clog2(TREE_NUM+LEVEL-1/LEVEL), // SRAM_Address high part width
+    localparam SRAM_ADW         = $clog2(TREE_NUM+LEVEL-1/LEVEL) + TREE_SIZE_BITS, // SRAM_Address width
     localparam ADW              = 2*(LEVEL-1), // Address width in a level
     localparam TREE_SIZE        = {TREE_SIZE_BITS{1'b1}}
 )(

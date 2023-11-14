@@ -34,7 +34,7 @@ module PIFO_SRAM_TOP
     localparam LEVEL_BITS       = $clog2(LEVEL),
     localparam TREE_NUM_BITS    = $clog2(TREE_NUM),
     localparam TREE_SIZE_BITS   = LEVEL,
-    localparam SRAM_ADW         = $clog2(TREE_NUM/LEVEL) + TREE_SIZE_BITS, // SRAM_Address width
+    localparam SRAM_ADW         = $clog2(TREE_NUM+LEVEL-1/LEVEL) + TREE_SIZE_BITS, // SRAM_Address width
     localparam TaskFIFO_DATA_BITS = (PTW+MTW)+(TREE_NUM_BITS+TREE_NUM_BITS)+2,
     localparam ADW              = LEVEL-1 // Address width in a level
 )(
