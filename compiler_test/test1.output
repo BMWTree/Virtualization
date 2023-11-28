@@ -1,0 +1,10 @@
+Node 0 :
+SchedStrategy:
+	type: pFabric
+minPerf:
+	nil
+actualPerf:
+	bandWidth: 100
+father: nil
+children: nil
+

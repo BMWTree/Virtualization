@@ -2,11 +2,10 @@
 
 #include <vector>
 #include <ostream>
+#include <string>
+#include "util.h"
 #include "SchedStrategy.h"
 #include "PerfInfo.h"
-
-using std::vector;
-using std::ostream;
 
 typedef struct TreeNode_* TreeNode;
 
@@ -16,14 +15,16 @@ struct TreeNode_{
     PerfInfo minPerf;
     PerfInfo actualPerf;
     TreeNode father;
-    vector<TreeNode> children;
+    std::vector<TreeNode> children;
+    // leaf node will be mapped to a srcIP
+    std::string srcIP;
 };
 
-TreeNode createTreeNode(SchedStrategy strategy, PerfInfo minPerf=nullptr);
-TreeNode createTreeRoot(SchedStrategy strategy, PerfInfo actualPerf, PerfInfo minPerf=nullptr);
-void attachNode(TreeNode node, TreeNode father);
-void checkMakeTree(TreeNode root);
+TreeNode createTreeNode(SchedStrategy strategy, PerfInfo minPerf=nullptr, std::string srcIP="");
+TreeNode createTreeRoot(SchedStrategy strategy, PerfInfo actualPerf, std::string srcIP="", PerfInfo minPerf=nullptr);
+void attachNode(TreeNode node, TreeNode father, int priority=-1, double weight=0.0);
+void checkMakeTree(TreeNode root, bool& hasPFabric);
 
-void printTreeNode(TreeNode node, ostream& os);
-void printTree(TreeNode node, ostream& os);
+void printTreeNode(TreeNode node, std::ostream& os);
+void printTree(TreeNode node, std::ostream& os);
 
