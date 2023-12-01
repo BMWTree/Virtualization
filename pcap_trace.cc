@@ -66,7 +66,7 @@ int main (int argc, char *argv[])
 
   // 创建并安装TCP应用程序
   uint16_t port = 8080;
-  // 第一对TCP应用程序
+  // 第一组TCP应用程序
   BulkSendHelper source1("ns3::TcpSocketFactory", InetSocketAddress(iface4.GetAddress(1), port));
   ApplicationContainer sourceApps1 = source1.Install(nodes.Get(0));
   sourceApps1.Start(Seconds(1.0));
@@ -77,7 +77,27 @@ int main (int argc, char *argv[])
   sinkApps1.Start(Seconds(0.0));
   sinkApps1.Stop(Seconds(simulation_time));
 
-  // 第二对TCP应用程序
+  BulkSendHelper source12("ns3::TcpSocketFactory", InetSocketAddress(iface4.GetAddress(1), port));
+  ApplicationContainer sourceApps12 = source12.Install(nodes.Get(0));
+  sourceApps12.Start(Seconds(1.0));
+  sourceApps12.Stop(Seconds(simulation_time));
+
+  PacketSinkHelper sink12("ns3::TcpSocketFactory", InetSocketAddress(iface4.GetAddress(1), port));
+  ApplicationContainer sinkApps12 = sink12.Install(nodes.Get(3));
+  sinkApps12.Start(Seconds(0.0));
+  sinkApps12.Stop(Seconds(simulation_time));
+
+  BulkSendHelper source13("ns3::TcpSocketFactory", InetSocketAddress(iface4.GetAddress(1), port));
+  ApplicationContainer sourceApps13 = source13.Install(nodes.Get(0));
+  sourceApps13.Start(Seconds(1.0));
+  sourceApps13.Stop(Seconds(simulation_time));
+
+  PacketSinkHelper sink13("ns3::TcpSocketFactory", InetSocketAddress(iface4.GetAddress(1), port));
+  ApplicationContainer sinkApps13 = sink13.Install(nodes.Get(3));
+  sinkApps13.Start(Seconds(0.0));
+  sinkApps13.Stop(Seconds(simulation_time));
+
+  // 第二组TCP应用程序
   BulkSendHelper source2("ns3::TcpSocketFactory", InetSocketAddress(iface5.GetAddress(1), port));
   ApplicationContainer sourceApps2 = source2.Install(nodes.Get(1));
   sourceApps2.Start(Seconds(1.0));
@@ -88,7 +108,27 @@ int main (int argc, char *argv[])
   sinkApps2.Start(Seconds(0.0));
   sinkApps2.Stop(Seconds(simulation_time));
 
-  // 第三对TCP应用程序
+  BulkSendHelper source22("ns3::TcpSocketFactory", InetSocketAddress(iface5.GetAddress(1), port));
+  ApplicationContainer sourceApps22 = source22.Install(nodes.Get(1));
+  sourceApps22.Start(Seconds(1.0));
+  sourceApps22.Stop(Seconds(simulation_time));
+
+  PacketSinkHelper sink22("ns3::TcpSocketFactory", InetSocketAddress(iface5.GetAddress(1), port));
+  ApplicationContainer sinkApps22 = sink22.Install(nodes.Get(4));
+  sinkApps22.Start(Seconds(0.0));
+  sinkApps22.Stop(Seconds(simulation_time));
+
+  BulkSendHelper source23("ns3::TcpSocketFactory", InetSocketAddress(iface5.GetAddress(1), port));
+  ApplicationContainer sourceApps23 = source23.Install(nodes.Get(1));
+  sourceApps23.Start(Seconds(1.0));
+  sourceApps23.Stop(Seconds(simulation_time));
+
+  PacketSinkHelper sink23("ns3::TcpSocketFactory", InetSocketAddress(iface5.GetAddress(1), port));
+  ApplicationContainer sinkApps23 = sink23.Install(nodes.Get(4));
+  sinkApps23.Start(Seconds(0.0));
+  sinkApps23.Stop(Seconds(simulation_time));
+
+  // 第三组TCP应用程序
   BulkSendHelper source3("ns3::TcpSocketFactory", InetSocketAddress(iface6.GetAddress(1), port));
   ApplicationContainer sourceApps3 = source3.Install(nodes.Get(2));
   sourceApps3.Start(Seconds(1.0));
@@ -98,6 +138,26 @@ int main (int argc, char *argv[])
   ApplicationContainer sinkApps3 = sink3.Install(nodes.Get(5));
   sinkApps3.Start(Seconds(0.0));
   sinkApps3.Stop(Seconds(simulation_time));
+
+  BulkSendHelper source32("ns3::TcpSocketFactory", InetSocketAddress(iface6.GetAddress(1), port));
+  ApplicationContainer sourceApps32 = source32.Install(nodes.Get(2));
+  sourceApps32.Start(Seconds(1.0));
+  sourceApps32.Stop(Seconds(simulation_time));
+
+  PacketSinkHelper sink32("ns3::TcpSocketFactory", InetSocketAddress(iface6.GetAddress(1), port));
+  ApplicationContainer sinkApps32 = sink32.Install(nodes.Get(5));
+  sinkApps32.Start(Seconds(0.0));
+  sinkApps32.Stop(Seconds(simulation_time));
+
+  BulkSendHelper source33("ns3::TcpSocketFactory", InetSocketAddress(iface6.GetAddress(1), port));
+  ApplicationContainer sourceApps33 = source33.Install(nodes.Get(2));
+  sourceApps33.Start(Seconds(1.0));
+  sourceApps33.Stop(Seconds(simulation_time));
+
+  PacketSinkHelper sink33("ns3::TcpSocketFactory", InetSocketAddress(iface6.GetAddress(1), port));
+  ApplicationContainer sinkApps33 = sink33.Install(nodes.Get(5));
+  sinkApps33.Start(Seconds(0.0));
+  sinkApps33.Stop(Seconds(simulation_time));
 
   // 启用pcap跟踪
   p2pRouter.EnablePcapAll ("PcapTrace");
