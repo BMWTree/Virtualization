@@ -13,7 +13,7 @@ static int nodeId;
 
 map<string, TreeNode> ipLeafNodeMap;
 
-TreeNode createTreeNode(SchedStrategy strategy, PerfInfo minPerf, string srcIP){
+TreeNode createTreeNode(SchedStrategy strategy, string srcIP, PerfInfo minPerf){
     TreeNode node = new TreeNode_;
     node->nodeId = nodeId++;
     node->strategy = strategy;
@@ -162,5 +162,38 @@ void printTree(TreeNode node, ostream& os){
     printTreeNode(node, os);
     for(auto &it : node->children){
         printTree(it, os);
+    }
+}
+
+void getUpPath(TreeNode leafNode, map<int, vector<TreeNode>>& leafNodePathMap){
+    TreeNode node = leafNode;
+    while(node){
+        leafNodePathMap[leafNode->nodeId].emplace_back(node);
+        node = node->father;
+    }
+}
+
+void printPushConvertTable(TreeNode root, ostream& os){
+    vector<TreeNode> leafNodes;
+    collectLeafNode(leafNodes, root);
+
+    // node->nodeId to path
+    map<int, vector<TreeNode>> leafNodePathMap;
+
+    for(auto &node : leafNodes){
+        getUpPath(node, leafNodePathMap);
+    }
+
+    for(auto &it : leafNodePathMap){
+        auto leafNodeId = it.first;
+        os << leafNodeId << ": ";
+        auto path = it.second;
+        for (auto node = path.begin(); node != path.end(); ++node) {
+            os << (*node)->nodeId;
+            if (node != std::prev(path.end())) {
+                os << "->";
+            }
+        }
+        os << "\n";
     }
 }

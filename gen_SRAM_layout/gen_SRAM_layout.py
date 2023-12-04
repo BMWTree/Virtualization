@@ -1,10 +1,24 @@
+import os
 import math
+from prettytable import PrettyTable
+import argparse
 
 DEGREE = 2
 
-file_path = './tests/test2.txt'
-readable_output_file_path = './tests/readable2.txt'
-mem_output_file_path = './tests/mem2.txt'
+# 设置命令行参数
+parser = argparse.ArgumentParser(description='Process tree data and print PrettyTable.')
+parser.add_argument('file_path', type=str, help='Path to the input file')
+args = parser.parse_args()
+
+# 获取命令行参数中的文件路径
+file_path = args.file_path
+
+# 自动生成 readable_output_file_path 和 mem_output_file_path
+base_path, file_name = os.path.split(file_path)
+file_name_without_ext, file_ext = os.path.splitext(file_name)
+
+readable_output_file_path = os.path.join(base_path, f'{file_name_without_ext}.tb')
+mem_output_file_path = os.path.join(base_path, f'{file_name_without_ext}.mem')
 
 with open(file_path, 'r') as file:
     text = file.read()
@@ -26,9 +40,14 @@ for line in lines:
 # 按照 tree_id 排序列表
 sorted_tree_data = sorted(tree_data, key=lambda x: x[0])
 
-# 打印结果
+# 使用 PrettyTable 打印表格
+table = PrettyTable()
+table.field_names = ["tree_id", "level"]
+
 for tree_id, level in sorted_tree_data:
-    print(f"tree_id: {tree_id}, level: {level}")
+    table.add_row([tree_id, level])
+
+print(table)
 
 # 找到 level 的最大值，max_level 就是 SRAM 的块数
 max_tree_id = max(tree_data, key=lambda x: x[0])[0]
@@ -69,13 +88,17 @@ print(f"level_bits: {level_bits}")
 print(f"tree_id_bits: {tree_id_bits}")
 print(f"SRAM_NUM_bits: {SRAM_id_bits}")
 
-
+# 使用 PrettyTable 打印表格
+table = PrettyTable()
+table.field_names = ["tree_id", "level", "SRAM_id", "start_address"]
 
 with open(readable_output_file_path, 'w') as output_file:
     for key, value in start_addr_dict.items():
         tree_id, i = key
         SRAM_id, start_address = value
-        print(f"tree_id: {tree_id}, level: {i}, SRAM_id: {SRAM_id}, start_address: {start_address}", file=output_file)
+        table.add_row([tree_id, i, SRAM_id, start_address])
+    
+    print(table, file=output_file)
 
 with open(mem_output_file_path, 'w') as output_file:
     for tree_id in range(2 ** tree_id_bits):

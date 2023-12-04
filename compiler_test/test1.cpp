@@ -21,7 +21,7 @@ int main(int argc, char * argv[]){
     ofstream OutStream;
     OutStream.open(argv[1]);
 
-    printTree(root, OutStream);
+    printPushConvertTable(root, OutStream);
 
     OutStream.close();
 

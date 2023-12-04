@@ -20,11 +20,12 @@ struct TreeNode_{
     std::string srcIP;
 };
 
-TreeNode createTreeNode(SchedStrategy strategy, PerfInfo minPerf=nullptr, std::string srcIP="");
+TreeNode createTreeNode(SchedStrategy strategy, std::string srcIP="", PerfInfo minPerf=nullptr);
 TreeNode createTreeRoot(SchedStrategy strategy, PerfInfo actualPerf, std::string srcIP="", PerfInfo minPerf=nullptr);
 void attachNode(TreeNode node, TreeNode father, int priority=-1, double weight=0.0);
 void checkMakeTree(TreeNode root, bool& hasPFabric);
 
 void printTreeNode(TreeNode node, std::ostream& os);
 void printTree(TreeNode node, std::ostream& os);
+void printPushConvertTable(TreeNode root, ostream& os);
 

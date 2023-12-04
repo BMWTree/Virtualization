@@ -4,16 +4,27 @@ LINKFLAGS = -lpcap
 
 TESTCASE_DIR := ../compiler_test
 TESTCASES = $(wildcard $(TESTCASE_DIR)/*.cpp)
-LLFILES = $(patsubst $(TESTCASE_DIR)/%.cpp,$(TESTCASE_DIR)/%.output,$(TESTCASES))
+LLFILES = $(patsubst $(TESTCASE_DIR)/%.cpp,$(TESTCASE_DIR)/%.tb,$(TESTCASES))
 
 .SECONDARY: $(LLFILES)
 
-run: $(patsubst $(TESTCASE_DIR)/%.cpp,$(TESTCASE_DIR)/%.output,$(TESTCASES))
+run: $(patsubst $(TESTCASE_DIR)/%.cpp,$(TESTCASE_DIR)/%.tb,$(TESTCASES))
+
+$(TESTCASE_DIR)/%.tb: $(TESTCASE_DIR)/%.output
+	python3 draw_path_table.py $< $@
+	rm $<
 
 $(TESTCASE_DIR)/%.output: $(TESTCASE_DIR)/%.exe
 	$< $@
 
 $(TESTCASE_DIR)/%.exe: $(TESTCASE_DIR)/%.cpp PerfInfo.o PIFOTree.o SchedStrategy.o PFabric.o SP.o WFQ.o util.o
+	$(CXX) $(CXXFLAGS) $(LINKFLAGS) -o $@ $^
+
+getFlowId: getFlowId.exe
+	./getFlowId.exe
+	rm getFlowId.exe
+
+getFlowId.exe: getFlowId.cpp util.o
 	$(CXX) $(CXXFLAGS) $(LINKFLAGS) -o $@ $^
 
 PerfInfo.o: PerfInfo.cpp PerfInfo.h
@@ -38,4 +49,4 @@ util.o: util.cpp util.h
 	$(CXX) $(CXXFLAGS) -c $<
 
 clean:
-	rm *.o *.output tests/*.o tests/*.output
+	rm *.o *.h.gch $(TESTCASE_DIR)/*.tb $(TESTCASE_DIR)/*.trace

@@ -1,4 +1,5 @@
 #include <map>
+#include <set>
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -89,4 +90,39 @@ std::string getTraceFileName(std::string inputFileName){
     outputFileName.replace(dotPos, 7, ".trace");
 
     return outputFileName;
+}
+
+void extractFlowIdHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, const unsigned char* packet) {
+    static std::set<std::string> flowIdSet;
+
+    std::string flowId = getFlowId(user, pkthdr, packet);
+
+    if(flowIdSet.insert(flowId).second){
+        std::cout << flowId << std::endl;
+    }
+}
+
+void extractFlowId(const char* pcap_file, const char* flowId_file){
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_t* pcap_handle;
+
+    // 打开 pcap 文件
+    pcap_handle = pcap_open_offline(pcap_file, errbuf);
+    if (pcap_handle == nullptr) {
+        std::cerr << "Error opening pcap file: " << errbuf << std::endl;
+        return;
+    }
+
+    freopen(flowId_file, "w", stdout);
+    if (pcap_loop(pcap_handle, 0, extractFlowIdHandler, nullptr) < 0) {
+        std::cerr << "Error in pcap_loop: " << pcap_geterr(pcap_handle) << std::endl;
+        pcap_close(pcap_handle);
+        return;
+    }
+    fclose(stdout);
+
+    // 关闭 pcap 文件
+    pcap_close(pcap_handle);
+    
+    return;
 }
