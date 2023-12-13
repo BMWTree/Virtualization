@@ -13,7 +13,9 @@
 下面描述trace文件的格式：
 
 type:0, idle_cycle:200199999
+
 type:1, tree_id:1, meta:0, priority0:1, priority1:2
+
 type:2
 
 type 代表任务的类型：
