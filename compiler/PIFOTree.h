@@ -16,13 +16,16 @@ struct TreeNode_{
     PerfInfo actualPerf;
     TreeNode father;
     std::vector<TreeNode> children;
-    // leaf node will be mapped to a srcIP
-    std::string srcIP;
 };
 
-TreeNode createTreeNode(SchedStrategy strategy, std::string srcIP="", PerfInfo minPerf=nullptr);
-TreeNode createTreeRoot(SchedStrategy strategy, PerfInfo actualPerf, std::string srcIP="", PerfInfo minPerf=nullptr);
-void attachNode(TreeNode node, TreeNode father, int priority=-1, double weight=0.0);
+TreeNode createTreeNode(SchedStrategy strategy, PerfInfo minPerf=nullptr);
+TreeNode createTreeRoot(SchedStrategy strategy, PerfInfo actualPerf, PerfInfo minPerf=nullptr);
+void attachNode(TreeNode node, TreeNode father);
+void attachFlow(std::string flowId, TreeNode father);
+void attachNode(TreeNode node, TreeNode father, int priority);
+void attachFlow(std::string flowId, TreeNode father, int priority);
+void attachNode(TreeNode node, TreeNode father, double weight);
+void attachFlow(std::string flowId, TreeNode father, double weight);
 void checkMakeTree(TreeNode root, bool& hasPFabric);
 
 void printTreeNode(TreeNode node, std::ostream& os);

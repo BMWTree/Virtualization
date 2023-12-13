@@ -10,25 +10,14 @@ using namespace std;
 
 int main(int argc, char * argv[]){
 
-    // std::map<std::string, double> weightTable;
-    // weightTable["10.1.1.1, 10.1.4.2, 49153, 8080, TCP"] = 0.5;
+    TreeNode root = createTreeRoot(SchedStrategySP(SchedStrategySP()), createPerfInfo(100));
+    TreeNode y = createTreeNode(SchedStrategyWFQ(SchedStrategyWFQ()));
+    TreeNode x = createTreeNode(SchedStrategyWFQ(SchedStrategyWFQ()));
+    TreeNode z = createTreeNode(SchedStrategySP(SchedStrategySP()));
 
-    // std::map<std::string, int> priorityTable;
-    // priorityTable["10.1.1.1, 10.1.4.2, 49153, 8080, TCP"] = 1;
-
-    TreeNode root = createTreeRoot(SchedStrategyPFabric(SchedStrategyPFabric()), createPerfInfo(100), "10.1.1.1");
-
-    TreeNode lc = createTreeNode(SchedStrategyUnknown(), "10.1.1.1");
-    TreeNode rc = createTreeNode(SchedStrategyUnknown(), "10.1.1.1");
-
-    TreeNode rlc = createTreeNode(SchedStrategyUnknown(), "10.1.1.1");
-    TreeNode rrc = createTreeNode(SchedStrategyUnknown(), "10.1.1.1");
-
-
-    attachNode(lc, root);
-    attachNode(rc, root);
-    attachNode(rlc, rc);
-    attachNode(rrc, rc);
+    attachNode(x, root, 1);
+    attachNode(y, root, 2);
+    attachNode(z, y, 0.5);
 
     bool hasPFabric = false;
     checkMakeTree(root, hasPFabric);

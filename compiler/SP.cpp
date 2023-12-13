@@ -11,17 +11,8 @@
 #include "SP.h"
 #include "util.h"
 
-StrategySP SchedStrategySP(bool isLeaf, std::map<std::string, int>* priorityTable){
+StrategySP SchedStrategySP(){
     StrategySP strategySP = new StrategySP_;
-    strategySP->isLeaf = isLeaf;
-    // this will only effect at the leaf node
-    // non-leaf node priorityTable will be filled during attach node
-    if(isLeaf){
-        assert(priorityTable != nullptr);
-        for(auto &it : *priorityTable){
-            strategySP->priorityTable[it.first] = it.second;
-        }
-    }
     return strategySP;
 }
 

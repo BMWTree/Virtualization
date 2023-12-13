@@ -10,9 +10,10 @@
 #include "SP.h"
 #include "WFQ.h"
 
-extern std::map<std::string, TreeNode> ipLeafNodeMap;
+extern std::map<std::string, TreeNode> flowNodeMap;
 
 static long long curCycle;
+static long long pktId;
 
 SchedStrategy SchedStrategyUnknown(){
     SchedStrategy schedStrategy = new SchedStrategy_;
@@ -105,7 +106,7 @@ void tagPriorityTillRoot(TreeNode leafNode, std::vector<int>& priorityVec, unsig
             break;
         }
         case WFQTYPE:{
-            priorityVec.emplace_back(calWFQNonLeafPriority(node->nodeId, node->strategy->u.WFQ, pkthdr));
+            priorityVec.emplace_back(calWFQNonLeafPriority(node->nodeId, node->father->strategy->u.WFQ, pkthdr));
             break;
         }
         }
@@ -114,12 +115,14 @@ void tagPriorityTillRoot(TreeNode leafNode, std::vector<int>& priorityVec, unsig
 }
 
 void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, const unsigned char* packet) {
-    std::string srcIP = getSrcIP(user, pkthdr, packet);
+    std::string flowId = getFlowId(user, pkthdr, packet);
 
-    if(srcIP == "10.1.4.2") return;
-    assert(ipLeafNodeMap.find(srcIP) != ipLeafNodeMap.end());
+    if(flowNodeMap.find(flowId) == flowNodeMap.end()){
+        return;
+    }
+    assert(flowNodeMap.find(flowId) != flowNodeMap.end());
 
-    TreeNode leafNode = ipLeafNodeMap[srcIP];
+    TreeNode leafNode = flowNodeMap[flowId];
 
     std::vector<int> priorityVec;
     tagPriorityTillRoot(leafNode, priorityVec, user, pkthdr, packet);
@@ -133,8 +136,11 @@ void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, c
     curCycle = thisPacketCycle;
     // std::cout << "type:1, priority:"<< priorityVec[1] <<", tree_id:" << leafNode->nodeId << ", data_meta:1, data_payload:" << priorityVec[0] << "\n";
     // std::cout << "type:2\n";
-
-    std::cout << "type:1, tree_id:" << leafNode->nodeId << ", data_meta:1, data_payload:" << priorityVec[0] << "\n";
+    std::cout << "type:1, tree_id:" << leafNode->nodeId << ", meta:" << pktId++;
+    for(size_t i=0; i<priorityVec.size(); i++){
+        std::cout << ", priority" << i << ":" << priorityVec[i];
+    }
+    std::cout<<std::endl;
     std::cout << "type:2\n";
 }
 

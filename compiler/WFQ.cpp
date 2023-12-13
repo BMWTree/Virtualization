@@ -11,17 +11,8 @@
 #include "WFQ.h"
 #include "util.h"
 
-StrategyWFQ SchedStrategyWFQ(bool isLeaf, std::map<std::string, double>* weightTable){
+StrategyWFQ SchedStrategyWFQ(){
     StrategyWFQ strategyWFQ = new StrategyWFQ_;
-    strategyWFQ->isLeaf = isLeaf;
-    // this will only effect at the leaf node
-    // non-leaf node weightTable will be filled during attach node
-    if(isLeaf){
-        assert(weightTable != nullptr);
-        for(auto &it : *weightTable){
-            strategyWFQ->weightTable[it.first] = it.second;
-        }
-    }
     strategyWFQ->curWeightSum = 0;
     strategyWFQ->virTime = 0;
     strategyWFQ->realTime = 0;
@@ -74,7 +65,9 @@ int calWFQLeafPriority(unsigned char* user, const struct pcap_pkthdr* pkthdr, co
 
 int calWFQNonLeafPriority(int nodeId, StrategyWFQ strategyWFQ, const struct pcap_pkthdr* pkthdr) {
     std::string nodeId_str = std::to_string(nodeId);
-
+    if(strategyWFQ->weightTable.find(nodeId_str) == strategyWFQ->weightTable.end()){
+        std::cout<<"nodeId_str: "<<nodeId_str<<std::endl;
+    }
     assert(strategyWFQ->weightTable.find(nodeId_str) != strategyWFQ->weightTable.end());
 
     double weight = strategyWFQ->weightTable[nodeId_str];

@@ -13,7 +13,14 @@ int main(int argc, char * argv[]){
     // std::map<std::string, int> priorityTable;
     // priorityTable["10.1.1.1, 10.1.4.2, 49153, 8080, TCP"] = 1;
 
-    TreeNode root = createTreeRoot(SchedStrategyPFabric(SchedStrategyPFabric()), createPerfInfo(100), "10.1.1.1");
+    TreeNode root = createTreeRoot(SchedStrategyPFabric(SchedStrategyPFabric()), createPerfInfo(100));
+
+    attachFlow("10.1.1.1, 10.1.4.2, 49153, 8080, TCP", root);
+    attachFlow("10.1.1.1, 10.1.4.2, 49154, 8080, TCP", root);
+    attachFlow("10.1.1.1, 10.1.4.2, 49155, 8080, TCP", root);
+    attachFlow("10.1.4.2, 10.1.1.1, 8080, 49153, TCP", root);
+    attachFlow("10.1.4.2, 10.1.1.1, 8080, 49154, TCP", root);
+    attachFlow("10.1.4.2, 10.1.1.1, 8080, 49155, TCP", root);
 
     bool hasPFabric = false;
     checkMakeTree(root, hasPFabric);

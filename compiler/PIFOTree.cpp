@@ -11,9 +11,9 @@ using namespace std;
 
 static int nodeId;
 
-map<string, TreeNode> ipLeafNodeMap;
+map<string, TreeNode> flowNodeMap;
 
-TreeNode createTreeNode(SchedStrategy strategy, string srcIP, PerfInfo minPerf){
+TreeNode createTreeNode(SchedStrategy strategy, PerfInfo minPerf){
     TreeNode node = new TreeNode_;
     node->nodeId = nodeId++;
     node->strategy = strategy;
@@ -21,11 +21,10 @@ TreeNode createTreeNode(SchedStrategy strategy, string srcIP, PerfInfo minPerf){
     node->actualPerf = new PerfInfo_;
     node->father = nullptr;
     node->children.clear();
-    node->srcIP = srcIP;
     return node;
 }
 
-TreeNode createTreeRoot(SchedStrategy strategy, PerfInfo actualPerf, string srcIP, PerfInfo minPerf){
+TreeNode createTreeRoot(SchedStrategy strategy, PerfInfo actualPerf, PerfInfo minPerf){
     TreeNode node = new TreeNode_;
     node->nodeId = nodeId++;
     node->strategy = strategy;
@@ -33,11 +32,32 @@ TreeNode createTreeRoot(SchedStrategy strategy, PerfInfo actualPerf, string srcI
     node->actualPerf = actualPerf;
     node->father = nullptr;
     node->children.clear();
-    node->srcIP = srcIP;
     return node;
 }
 
-void attachNode(TreeNode node, TreeNode father, int priority, double weight){
+void attachFlow(string flowId, TreeNode father){
+    if(father == nullptr) return;
+    flowNodeMap[flowId] = father;
+    switch(father->strategy->type){
+    case UNKNOWNTYPE:{
+        break;
+    }
+    case PFABRICTYPE:{
+        break;
+    }
+    case SPTYPE:{
+        assert(0);
+        break;
+    }
+    case WFQTYPE:{
+        assert(0);
+        break;
+    }
+    }
+}
+
+void attachNode(TreeNode node, TreeNode father){
+    if(father == nullptr) return;
     node->father = father;
     father->children.emplace_back(node);
     switch(father->strategy->type){
@@ -48,14 +68,108 @@ void attachNode(TreeNode node, TreeNode father, int priority, double weight){
         break;
     }
     case SPTYPE:{
+        assert(0);
+        break;
+    }
+    case WFQTYPE:{
+        assert(0);
+        break;
+    }
+    }
+}
+
+void attachFlow(string flowId, TreeNode father, int priority){
+    if(father == nullptr) return;
+    flowNodeMap[flowId] = father;
+    switch(father->strategy->type){
+    case UNKNOWNTYPE:{
+        assert(0);
+        break;
+    }
+    case PFABRICTYPE:{
+        assert(0);
+        break;
+    }
+    case SPTYPE:{
         StrategySP strategySP = father->strategy->u.SP;
-        assert(priority != -1);
+        strategySP->priorityTable[flowId] = priority;
+        break;
+    }
+    case WFQTYPE:{
+        assert(0);
+        break;
+    }
+    }
+}
+
+void attachNode(TreeNode node, TreeNode father, int priority){
+    if(father == nullptr) return;
+    node->father = father;
+    father->children.emplace_back(node);
+    switch(father->strategy->type){
+    case UNKNOWNTYPE:{
+        assert(0);
+        break;
+    }
+    case PFABRICTYPE:{
+        assert(0);
+        break;
+    }
+    case SPTYPE:{
+        StrategySP strategySP = father->strategy->u.SP;
         strategySP->priorityTable[to_string(node->nodeId)] = priority;
         break;
     }
     case WFQTYPE:{
+        assert(0);
+        break;
+    }
+    }
+}
+
+void attachFlow(string flowId, TreeNode father, double weight){
+    if(father == nullptr) return;
+    flowNodeMap[flowId] = father;
+    switch(father->strategy->type){
+    case UNKNOWNTYPE:{
+        assert(0);
+        break;
+    }
+    case PFABRICTYPE:{
+        assert(0);
+        break;
+    }
+    case SPTYPE:{
+        assert(0);
+        break;
+    }
+    case WFQTYPE:{
         StrategyWFQ strategyWFQ = father->strategy->u.WFQ;
-        assert(weight != 0.0);
+        strategyWFQ->weightTable[flowId] = weight;
+        break;
+    }
+    }
+}
+
+void attachNode(TreeNode node, TreeNode father, double weight){
+    if(father == nullptr) return;
+    node->father = father;
+    father->children.emplace_back(node);
+    switch(father->strategy->type){
+    case UNKNOWNTYPE:{
+        assert(0);
+        break;
+    }
+    case PFABRICTYPE:{
+        assert(0);
+        break;
+    }
+    case SPTYPE:{
+        assert(0);
+        break;
+    }
+    case WFQTYPE:{
+        StrategyWFQ strategyWFQ = father->strategy->u.WFQ;
         strategyWFQ->weightTable[to_string(node->nodeId)] = weight;
         break;
     }
@@ -65,7 +179,6 @@ void attachNode(TreeNode node, TreeNode father, int priority, double weight){
 void collectLeafNode(vector<TreeNode>& leafNodes, TreeNode node){
     if(node->children.empty()){
         leafNodes.emplace_back(node);
-        assert(node->srcIP != "");
     }
     for(auto &it : node->children){
         collectLeafNode(leafNodes, it);
@@ -112,7 +225,6 @@ void checkMakeTree(TreeNode root, bool& hasPFabric){
     // }
 
     for(auto &node : leafNodes){
-        ipLeafNodeMap[node->srcIP] = node;
         if(node->strategy->type == PFABRICTYPE){
             hasPFabric = true;
         }
