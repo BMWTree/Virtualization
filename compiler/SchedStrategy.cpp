@@ -13,7 +13,11 @@
 extern std::map<std::string, TreeNode> flowNodeMap;
 
 static long long curCycle;
+static long long cumulatePktNum;
 static long long pktId;
+
+const long long IDLECYCLE_BITS = 28;
+const long long MAX_IDLECYCLE = (1 << 28) - 1;
 
 SchedStrategy SchedStrategyUnknown(){
     SchedStrategy schedStrategy = new SchedStrategy_;
@@ -130,9 +134,20 @@ void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, c
 
     long long thisPacketCycle = tsToCycle(&pkthdr->ts);
     assert(thisPacketCycle >= curCycle);
+
     if(thisPacketCycle - curCycle > 1){
-        std::cout << "type:0, idle_cycle:" << thisPacketCycle - curCycle - 1 << "\n";
+        for(long long i=0; i<cumulatePktNum; i++){
+            std::cout << "type:2" << std::endl;
+        }
+        cumulatePktNum = 0;
+        if(curCycle != 0){
+            std::cout << "type:0, idle_cycle:" << thisPacketCycle - curCycle - 1 << std::endl;
+        }else{
+            std::cout << "type:0, idle_cycle:100" << std::endl;
+        }
+        
     }
+
     curCycle = thisPacketCycle;
     // std::cout << "type:1, priority:"<< priorityVec[1] <<", tree_id:" << leafNode->nodeId << ", data_meta:1, data_payload:" << priorityVec[0] << "\n";
     // std::cout << "type:2\n";
@@ -141,7 +156,7 @@ void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, c
         std::cout << ", priority" << i << ":" << priorityVec[i];
     }
     std::cout<<std::endl;
-    std::cout << "type:2\n";
+    cumulatePktNum++;
 }
 
 void tagPriority(const char* pcap_file, const char* trace_file, bool hasPFabric){
@@ -165,6 +180,13 @@ void tagPriority(const char* pcap_file, const char* trace_file, bool hasPFabric)
         pcap_close(pcap_handle);
         return;
     }
+    if(cumulatePktNum > 0){
+        for(long long i=0; i<cumulatePktNum; i++){
+            std::cout << "type:2" << std::endl;
+        }
+        cumulatePktNum = 0;
+    }
+    std::cout << "type:0, idle_cycle:" << MAX_IDLECYCLE << std::endl;
     fclose(stdout);
 
     // 关闭 pcap 文件
