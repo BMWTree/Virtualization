@@ -34,7 +34,7 @@ void app_main_loop_flows2nodes(int nodeid)
     if (worker_mbuf == NULL)
         rte_panic("Worker thread: cannot allocate buffer space\n");
 
-    while (1)
+    while (!force_quit)
     {
         flows2nodes();
     }

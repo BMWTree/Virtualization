@@ -33,7 +33,7 @@ void app_main_loop_forwarding(void)
     if (worker_mbuf == NULL)
         rte_panic("Worker thread: cannot allocate buffer space\n");
 
-    while (1)
+    while (!force_quit)
     {
         forward();
     }
