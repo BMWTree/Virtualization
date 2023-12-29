@@ -54,11 +54,17 @@ void app_main_loop_rx2flows(void)
         }
 
 
-        ipv4_5tuple = rte_pktmbuf_mtod_offset(worker_mbuf->array[0], struct ipv4_5tuple_host *, sizeof(struct ether_hdr) + offsetof(struct ipv4_hdr, time_to_live));
+        ipv4_5tuple = rte_pktmbuf_mtod_offset(worker_mbuf->array[0], struct ipv4_5tuple_host *, sizeof(struct rte_ether_hdr) + offsetof(struct rte_ipv4_hdr, time_to_live));
         for (int flow = 0; flow < 6; ++flow)
         {
             if (ipv4_5tuple->port_src == app.flow_src_ports[flow] || ipv4_5tuple->port_dst == app.flow_src_ports[flow])
             {
+                struct flow_key key;
+                key.ip=ipv4_5tuple->ip_src;
+                key.port=ipv4_5tuple->port_src;
+                struct app_fwd_table_item value;
+                value.arrival_timestamp=rte_get_tsc_cycles();
+                app_fwd_learning(&key,&value);
                 rte_ring_sp_enqueue(app.rings_flows[flow], worker_mbuf->array[0]);
                 RTE_LOG(
                     DEBUG, SWITCH,

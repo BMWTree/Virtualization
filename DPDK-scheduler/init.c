@@ -61,11 +61,12 @@ struct app_params app = {
 static struct rte_eth_conf port_conf = {
     .rxmode = {
         .split_hdr_size = 0,
-        .header_split   = 0, /* Header Split disabled */
-        .hw_ip_checksum = 1, /* IP checksum offload enabled */
-        .hw_vlan_filter = 0, /* VLAN filtering disabled */
-        .jumbo_frame    = 0, /* Jumbo Frame Support disabled */
-        .hw_strip_crc   = 1, /* CRC stripped by hardware */
+        .offloads = DEV_RX_OFFLOAD_IPV4_CKSUM | DEV_RX_OFFLOAD_KEEP_CRC
+        // .header_split   = 0, /* Header Split disabled */
+        // .hw_ip_checksum = 1, /* IP checksum offload enabled */
+        // .hw_vlan_filter = 0, /* VLAN filtering disabled */
+        // .jumbo_frame    = 0, /* Jumbo Frame Support disabled */
+        // .hw_strip_crc   = 1, /* CRC stripped by hardware */
     },
     .rx_adv_conf = {
         .rss_conf = {
@@ -247,7 +248,9 @@ app_init_ports(void) {
 
         struct rte_eth_dev_info dev_info;
         rte_eth_dev_info_get(i,&dev_info);
-        RTE_LOG(INFO, SWITCH, "Initializing NIC port %u (pci= %04x:%02x:%02x.%x)\n", port,dev_info.pci_dev->addr.domain,dev_info.pci_dev->addr.bus,dev_info.pci_dev->addr.devid,dev_info.pci_dev->addr.function);
+        struct rte_pci_addr pci_dev;
+        rte_pci_addr_parse(dev_info.driver_name,&pci_dev);
+        RTE_LOG(INFO, SWITCH, "Initializing NIC port %u (pci= %04x:%02x:%02x.%x)\n", port,pci_dev.domain,pci_dev.bus,pci_dev.devid,pci_dev.function);
 
         /* Init port */
         ret = rte_eth_dev_configure(

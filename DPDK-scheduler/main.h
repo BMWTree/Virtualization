@@ -84,6 +84,7 @@
 #include <rte_malloc.h>
 #include <rte_hash.h>
 #include <rte_hash_crc.h>
+#include <rte_ring_elem.h>
 
 #ifndef APP_MBUF_ARRAY_SIZE
 #define APP_MBUF_ARRAY_SIZE 256
@@ -99,6 +100,14 @@
 #define VALID_TIME INT_MAX // valid time (in ms) for a forwarding item
 #define MEAN_PKT_SIZE 800  // used for calculate ring length and # of mbuf pools
 #define RATE_SCALE 20      // the scale of tx rate
+
+#define ETHER_ADDR_LEN  6 /**< Length of Ethernet address. */
+#define ETHER_TYPE_LEN  2 /**< Length of Ethernet type field. */
+#define ETHER_CRC_LEN   4 /**< Length of Ethernet CRC. */
+#define ETHER_HDR_LEN   \
+	(ETHER_ADDR_LEN * 2 + ETHER_TYPE_LEN) /**< Length of Ethernet header. */
+#define ETHER_MIN_LEN   64    /**< Minimum frame len, including CRC. */
+#define ETHER_MAX_LEN   1518  /**< Maximum frame len, including CRC. */
 
 #define MIN(a, b) \
     ({ __typeof__ (a) _a = (a); \
@@ -118,11 +127,7 @@ struct app_mbuf_array
 
 struct app_fwd_table_item
 {
-    int last_sent_port;
-    /* the time (in cpu frequency) when the item is added */
-    uint64_t last_sent_time;
-    uint64_t flowlet_gap;
-    bool lock;
+    int arrival_timestamp;
 };
 
 struct app_mac_table_item {
@@ -154,6 +159,7 @@ struct app_configs
     char *intra_node;
     int flow_src_ports[6];
     int SP_priority[8];
+    int WFQ_weight[8];
 };
 
 extern struct app_configs app_cfg;
@@ -275,7 +281,7 @@ struct app_params
     char *intra_node;
     int flow_src_ports[6];
     int SP_priority[8];
-
+    int WFQ_weight[8];
 } __rte_cache_aligned;
 
 struct ipv4_5tuple_host

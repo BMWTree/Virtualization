@@ -27,10 +27,10 @@ uint32_t get_buff_occu_bytes(void) {
 }
 
 static int mark_packet_with_ecn(struct rte_mbuf *pkt) {
-    struct ipv4_hdr *iphdr;
+    struct rte_ipv4_hdr *iphdr;
     uint16_t cksum;
     if (RTE_ETH_IS_IPV4_HDR(pkt->packet_type)) {
-        iphdr = rte_pktmbuf_mtod_offset(pkt, struct ipv4_hdr *, sizeof(struct ether_hdr));
+        iphdr = rte_pktmbuf_mtod_offset(pkt, struct ipv4_hdr *, sizeof(struct rte_ether_hdr));
         if ((iphdr->type_of_service & 0x03) != 0) {
             iphdr->type_of_service |= 0x3;
             iphdr->hdr_checksum = 0;

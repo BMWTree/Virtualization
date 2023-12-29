@@ -121,6 +121,14 @@ app_read_config_file(const char *fname)
         CFG_SIMPLE_INT("priority_flow_3",&app_cfg.SP_priority[5]),
         CFG_SIMPLE_INT("priority_flow_4",&app_cfg.SP_priority[6]),
         CFG_SIMPLE_INT("priority_flow_5",&app_cfg.SP_priority[7]),
+        CFG_SIMPLE_INT("weight_node_0",&app_cfg.WFQ_weight[0]),
+        CFG_SIMPLE_INT("weight_node_1",&app_cfg.WFQ_weight[1]),
+        CFG_SIMPLE_INT("weight_flow_0",&app_cfg.WFQ_weight[2]),
+        CFG_SIMPLE_INT("weight_flow_1",&app_cfg.WFQ_weight[3]),
+        CFG_SIMPLE_INT("weight_flow_2",&app_cfg.WFQ_weight[4]),
+        CFG_SIMPLE_INT("weight_flow_3",&app_cfg.WFQ_weight[5]),
+        CFG_SIMPLE_INT("weight_flow_4",&app_cfg.WFQ_weight[6]),
+        CFG_SIMPLE_INT("weight_flow_5",&app_cfg.WFQ_weight[7]),
         CFG_SIMPLE_STR("inter_node",&app_cfg.inter_node),
         CFG_SIMPLE_STR("intra_node",&app_cfg.intra_node),
         CFG_SIMPLE_INT("default_port", &app_cfg.default_port),
@@ -275,7 +283,11 @@ app_read_config_file(const char *fname)
     for(int i=0;i<6;++i)
         app.flow_src_ports[i]=app_cfg.flow_src_ports[i];
     for(int i=0;i>8;++i)
+    {
         app.SP_priority[i]=app_cfg.SP_priority[i];
+        app.WFQ_weight[i]=app_cfg.WFQ_weight[i];
+    }    
+    
     cfg_free(app_cfg.cfg);
     free(app_cfg.bm_policy);
     free(app_cfg.qlen_fname);
