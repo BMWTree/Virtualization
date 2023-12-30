@@ -1,9 +1,9 @@
 TREE_NUM_BITS = 2
-IDLECYCLE_BITS = 28
+IDLECYCLE_BITS = 8
 PTW = 28
 MTW = 20
 
-ROM_SIZE = 262144
+ROM_SIZE = 65536
 
 
 TOTAL_WIDTH = max(IDLECYCLE_BITS, (PTW+TREE_NUM_BITS+MTW+PTW)) + 2
@@ -14,8 +14,8 @@ padding_bits = abs(IDLECYCLE_BITS - (PTW+TREE_NUM_BITS+MTW+PTW))
 
 width_dict = {'type': 2, 'priority1': PTW, 'tree_id': TREE_NUM_BITS, 'meta': MTW, 'priority0': PTW, 'idle_cycle': IDLECYCLE_BITS}
 
-readable_file = '../compiler_test/test2_3.trace'
-mem_file = '../compiler_test/test2_3.mem'
+readable_file = '../compiler_test/test2_1.trace'
+mem_file = '../compiler_test/test2_1.mem'
 
 # 打开文件并读取除去第一行的剩余部分
 with open(readable_file, 'r') as file:
