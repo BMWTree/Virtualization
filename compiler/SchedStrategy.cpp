@@ -16,8 +16,9 @@ static long long curCycle;
 static long long cumulatePktNum;
 static long long pktId;
 
-const long long IDLECYCLE_BITS = 28;
-const long long MAX_IDLECYCLE = (1 << 28) - 1;
+const long long IDLECYCLE_BITS = 8;
+const long long MAX_IDLECYCLE = (1 << 8) - 1;
+const long long MAX_INTERVAL_IDLECYCLE = 200;
 
 SchedStrategy SchedStrategyUnknown(){
     SchedStrategy schedStrategy = new SchedStrategy_;
@@ -141,7 +142,7 @@ void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, c
         }
         cumulatePktNum = 0;
         if(curCycle != 0){
-            std::cout << "type:0, idle_cycle:" << thisPacketCycle - curCycle - 1 << std::endl;
+            std::cout << "type:0, idle_cycle:" << std::min(thisPacketCycle - curCycle - 1, MAX_INTERVAL_IDLECYCLE) << std::endl;
         }else{
             std::cout << "type:0, idle_cycle:100" << std::endl;
         }
