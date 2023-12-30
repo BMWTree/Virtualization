@@ -63,9 +63,12 @@ wire [(MTW+PTW)-1:0] i_push_data;
 
 assign i_pop = i_trace_data[TRACE_DATA_BITS-1];
 assign i_push = i_trace_data[TRACE_DATA_BITS-2];
-assign i_push_priority = i_trace_data[(MTW+PTW)+TREE_NUM_BITS+PTW-1:(MTW+PTW)+TREE_NUM_BITS];
-assign i_push_tree_id = i_trace_data[(MTW+PTW)+TREE_NUM_BITS-1:(MTW+PTW)];
-assign i_push_data = i_trace_data[(MTW+PTW)-1:0];
+assign i_push_tree_id = i_trace_data[(MTW+PTW)+TREE_NUM_BITS+PTW-1:(MTW+PTW)+PTW];
+// assign i_push_tree_id = i_trace_data[(MTW+PTW)+TREE_NUM_BITS-1:(MTW+PTW)];
+assign i_push_data = i_trace_data[(MTW+PTW)+PTW-1:PTW];
+// assign i_push_data = i_trace_data[(MTW+PTW)-1:0];
+assign i_push_priority = i_trace_data[PTW-1:0];
+// assign i_push_priority = i_trace_data[(MTW+PTW)+TREE_NUM_BITS+PTW-1:(MTW+PTW)+TREE_NUM_BITS];
 assign i_idle_cycle_counter = i_trace_data[IDLECYCLE_BITS-1:0];
 
 

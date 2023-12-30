@@ -54,7 +54,8 @@ reg [LEVEL-1:0] rpu_push,
                 rpu_push_new, 
                 rpu_push_new_nxt, 
                 rpu_push_inherit, 
-                rpu_push_inherit_nxt;
+                rpu_push_inherit_nxt,
+                rpu_push_inherit_mid_nxt;
 
 reg [LEVEL-1:0] rpu_pop,
                 rpu_pop_nxt,
@@ -62,7 +63,7 @@ reg [LEVEL-1:0] rpu_pop,
                 rpu_pop_new_nxt,
                 rpu_pop_inherit,
                 rpu_pop_inherit_nxt,
-                rpu_pop_inherit_pre;
+                rpu_pop_inherit_mid_nxt;
 
 reg [TREE_NUM_BITS-1:0] rpu_treeId [0:LEVEL-1];
 reg [(PTW+MTW)-1:0] rpu_push_data [0:LEVEL-1];
@@ -79,13 +80,17 @@ wire [LEVEL-1:0] rpu_ready_nxt ;
 // ============================ debug =======================================
 reg [1:0] rpu_state_0;
 reg [1:0] rpu_state_1;
-// reg [1:0] rpu_state_2;
-// reg [1:0] rpu_state_3;
+reg [1:0] rpu_state_2;
+reg [1:0] rpu_state_3;
+reg [1:0] rpu_state_4;
 
 reg [LEVEL_BITS-1:0] rpu_level_0;
 reg [LEVEL_BITS-1:0] rpu_level_1;
-// reg [LEVEL_BITS-1:0] rpu_level_2;
-// reg [LEVEL_BITS-1:0] rpu_level_3;
+reg [LEVEL_BITS-1:0] rpu_level_2;
+reg [LEVEL_BITS-1:0] rpu_level_3;
+wire [LEVEL_BITS-1:0] rpu_level_4;
+wire [LEVEL_BITS-1:0] rpu_level_nxt_4;
+
 
 reg [(PTW+MTW)-1:0] rpu_PushData_0;
 reg [(PTW+MTW)-1:0] rpu_PushData_1;
@@ -97,19 +102,27 @@ reg [(PTW+MTW)-1:0] rpu_PushData_1;
 // reg [(PTW+MTW)-1:0] rpu_PushData_7;
 
 wire [1:0] TaskHead_type_0; // [1] is push_bit, [0] is pop_bit
+wire [1:0] rpu_state_mid_0;
+wire [1:0] rpu_state_mid_4;
 
 assign TaskHead_type_0 = TaskHead_type[0];
 
 
+assign rpu_state_mid_0 = rpu_state_mid[0];
+assign rpu_state_mid_4 = rpu_state_mid[4];
 assign rpu_state_0 = rpu_state[0];
 assign rpu_state_1 = rpu_state[1];
-// assign rpu_state_2 = rpu_state[2];
-// assign rpu_state_3 = rpu_state[3];
+assign rpu_state_2 = rpu_state[2];
+assign rpu_state_3 = rpu_state[3];
+assign rpu_state_4 = rpu_state[4];
 
 assign rpu_level_0 = rpu_level[0];
 assign rpu_level_1 = rpu_level[1];
-// assign rpu_level_2 = rpu_level[2];
-// assign rpu_level_3 = rpu_level[3];
+assign rpu_level_2 = rpu_level[2];
+assign rpu_level_3 = rpu_level[3];
+assign rpu_level_4 = rpu_level[4];
+assign rpu_level_nxt_4 = rpu_level_nxt[4];
+
 
 assign rpu_PushData_0 = rpu_push_data[0];
 assign rpu_PushData_1 = rpu_push_data[1];
@@ -153,6 +166,14 @@ end
 assign rpu_push_inherit_nxt[0] = rpu_push[LEVEL-1] && (rpu_level[LEVEL-1] < LEVEL-1);
 assign rpu_pop_inherit_nxt[0] = rpu_pop[LEVEL-1] && (rpu_level[LEVEL-1] < LEVEL-1);
 
+// // rpu_push_inherit_mid_nxt and rpu_pop_inherit_mid_nxt
+// for (genvar i = 1; i < LEVEL; i++) begin
+//     assign rpu_push_inherit_mid_nxt[i] = rpu_push_inherit_nxt[i-1] && (rpu_level_nxt[i-1] < LEVEL-1);
+//     assign rpu_pop_inherit_mid_nxt[i] = rpu_pop_inherit_nxt[i-1] && (rpu_level_nxt[i-1] < LEVEL-1);
+// end
+// assign rpu_push_inherit_mid_nxt[0] = rpu_push_inherit_nxt[LEVEL-1] && (rpu_level_nxt[LEVEL-1] < LEVEL-1);
+// assign rpu_pop_inherit_mid_nxt[0] = rpu_pop_inherit_nxt[LEVEL-1] && (rpu_level_nxt[LEVEL-1] < LEVEL-1);
+
 for (genvar i = 0; i < LEVEL; i++) begin
     always @ (posedge i_clk or negedge i_arst_n) begin
         if (!i_arst_n) begin
@@ -165,15 +186,15 @@ for (genvar i = 0; i < LEVEL; i++) begin
     end
 end
 
-for (genvar i = 0; i < LEVEL; i++) begin
-    always @ (posedge i_clk or negedge i_arst_n) begin
-        if (!i_arst_n) begin
-            rpu_pop_inherit_pre[i] <= '0;
-        end else begin
-            rpu_pop_inherit_pre[i] <= rpu_pop_inherit[i];
-        end
-    end
-end
+// for (genvar i = 0; i < LEVEL; i++) begin
+//     always @ (posedge i_clk or negedge i_arst_n) begin
+//         if (!i_arst_n) begin
+//             rpu_pop_inherit_pre[i] <= '0;
+//         end else begin
+//             rpu_pop_inherit_pre[i] <= rpu_pop_inherit[i];
+//         end
+//     end
+// end
 
 // ============================ end drive rpu push pop =======================================
 
@@ -184,9 +205,9 @@ end
 // if push_inherit or pop_inherit, level_nxt is level + 1
 // else is push_new or pop_new, level_nxt is 0
 for (genvar i = 1; i < LEVEL; i++) begin
-    assign rpu_level_nxt[i] = (rpu_push_inherit_nxt[i] || rpu_pop_inherit_nxt[i]) ? (rpu_level[i-1]+1) : '0;
+    assign rpu_level_nxt[i] = (rpu_push_inherit_nxt[i] || rpu_pop_inherit_nxt[i] || rpu_pop_inherit[i]) ? (rpu_level[i-1]+1) : '0;
 end
-assign rpu_level_nxt[0] = (rpu_push_inherit_nxt[0] || rpu_pop_inherit_nxt[0]) ? (rpu_level[LEVEL-1]+1) : '0;
+assign rpu_level_nxt[0] = (rpu_push_inherit_nxt[0] || rpu_pop_inherit_nxt[0] || rpu_pop_inherit[0]) ? (rpu_level[LEVEL-1]+1) : '0;
 
 // rpu_state and rpu_level
 for (genvar i = 0; i < LEVEL; i++) begin
@@ -363,24 +384,24 @@ for (genvar i = 0; i < LEVEL; i++) begin
                             || (rpu_state_mid[i] != ST_POP && rpu_level_nxt[i] == LEVEL-1);// ST_PUSH or ST_WB
 end
 
-for (genvar i = 2; i < LEVEL; i++) begin
+for (genvar i = 1; i < LEVEL-1; i++) begin
     assign rpu_push_new_nxt[i] = (rpu_state_mid[i] != ST_IDLE) ? 1'b0 : TaskHead_type[i][1];
     
-    assign rpu_pop_new_nxt[i] = (rpu_state_mid[i] != ST_IDLE || !rpu_ready_nxt[i-1]/*rpu_state_mid[i-1] != ST_IDLE*/ || (rpu_pop_nxt[i-1] | rpu_push_nxt[i-1])) ? 1'b0 : (TaskHead_type[i][0] && !TaskHead_type[i][1]);
+    assign rpu_pop_new_nxt[i] = (rpu_state_mid[i] != ST_IDLE || !rpu_ready_nxt[i-1]/*rpu_state_mid[i-1] != ST_IDLE*/ || (rpu_pop_new_nxt[i-1] | rpu_push_new_nxt[i-1])) ? 1'b0 : (TaskHead_type[i][0] && !TaskHead_type[i][1]);
 end
 
-assign rpu_push_new_nxt[1] = (rpu_state_mid[1] != ST_IDLE) ? 1'b0 : TaskHead_type[1][1];
+assign rpu_push_new_nxt[0] = (rpu_state_mid[0] != ST_IDLE) ? 1'b0 : TaskHead_type[0][1];
 
-assign rpu_pop_new_nxt[1] = (rpu_state_mid[1] != ST_IDLE || !rpu_ready_nxt[0]/*rpu_state_mid[0] != ST_IDLE*/ || (rpu_pop_inherit_nxt[0] | rpu_push_inherit_nxt[0])) ? 1'b0 : (TaskHead_type[1][0] && !TaskHead_type[1][1]);
+assign rpu_pop_new_nxt[0] = (rpu_state_mid[0] != ST_IDLE || !rpu_ready_nxt[LEVEL-1]/*rpu_state_mid[0] != ST_IDLE*/) ? 1'b0 : (TaskHead_type[0][0] && !TaskHead_type[0][1]);
 
-assign rpu_push_new_nxt[0] = (rpu_state_mid[0] != ST_IDLE) ? 1'b0 
-: (rpu_pop_new_nxt[1] == 1'b1) ? 1'b0 
-: TaskHead_type[0][1];
+assign rpu_push_new_nxt[LEVEL-1] = (rpu_state_mid[LEVEL-1] != ST_IDLE) ? 1'b0 
+: (rpu_pop_new_nxt[0] == 1'b1) ? 1'b0 
+: TaskHead_type[LEVEL-1][1];
 
-assign rpu_pop_new_nxt[0] = (rpu_state_mid[0] != ST_IDLE) ? 1'b0 
-: (rpu_pop_new_nxt[1] == 1'b1) ? 1'b0 
-: (!rpu_ready_nxt[LEVEL-1] /*rpu_state_mid[LEVEL-1] != ST_IDLE*/ || (rpu_pop_nxt[LEVEL-1] | rpu_push_nxt[LEVEL-1])) ? 1'b0 
-: (TaskHead_type[0][0] && !TaskHead_type[0][1]);
+assign rpu_pop_new_nxt[LEVEL-1] = (rpu_state_mid[LEVEL-1] != ST_IDLE) ? 1'b0 
+: (rpu_pop_new_nxt[0] == 1'b1) ? 1'b0 
+: (!rpu_ready_nxt[LEVEL-2] /*rpu_state_mid[LEVEL-1] != ST_IDLE*/ || (rpu_pop_new_nxt[LEVEL-2] | rpu_push_new_nxt[LEVEL-2])) ? 1'b0 
+: (TaskHead_type[LEVEL-1][0] && !TaskHead_type[LEVEL-1][1]);
 
 always_ff @( posedge i_clk ) begin
     rpu_pop_new <= rpu_pop_new_nxt;

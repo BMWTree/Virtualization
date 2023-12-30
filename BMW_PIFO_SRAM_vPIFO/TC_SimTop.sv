@@ -4,15 +4,16 @@
 
 module SIM_TOP();
 
-parameter LEVEL = 4;
-parameter TREE_NUM = 4;
+parameter LEVEL = 5;
+parameter TREE_NUM = 3;
 parameter FIFO_SIZE = 2048;
-parameter PTW = 16;
-parameter MTW = TREE_NUM_BITS;
+parameter PTW = 28;
+parameter MTW = 20;
 parameter CTW = 16;
-parameter IDLECYCLE = 1024;
-parameter ROM_SIZE = 16;
-parameter MEM_INIT_FILE = "test_trace.mem";
+parameter IDLECYCLE = 256;
+parameter ROM_SIZE = 65536;
+parameter MEM_INIT_FILE = "test2_1.mem";
+parameter OUTPUT_FILE = "output2_1.txt";
 
 
 
@@ -26,8 +27,11 @@ reg            arst_n;
 
 integer        seed;
 integer        R;
+integer f;
 reg push;
 reg pop;
+reg [16:0] push_cnt;
+reg [16:0] pop_cnt;
 reg [(MTW+PTW)-1:0] push_data;
 reg [TREE_NUM_BITS-1:0] push_tree_id;
 reg [PTW-1:0] push_priority;
@@ -127,10 +131,10 @@ always #4 begin clk = ~clk; end
 // Initial
 //-----------------------------------------------------------------------------  
 
-initial begin            
-   $dumpfile("wave.vcd"); // 指定用作dumpfile的文件
-   $dumpvars; // dump all vars
-end
+// initial begin            
+//    $dumpfile("wave.vcd"); // 指定用作dumpfile的文件
+//    $dumpvars; // dump all vars
+// end
 
 initial begin
    for (i=0;i<50;i=i+1) begin
@@ -138,20 +142,45 @@ initial begin
    end
 end
 
+always_ff @( posedge clk ) begin
+   if (pop_out) begin
+      // $fwrite(f, "meta:%d, priority:%d\n", pop_data[(MTW+PTW)-1:PTW], pop_data[PTW-1:0]);
+      $fwrite(f,"%0d %0x\n", pop_data[PTW-1:0], pop_cnt);
+   end
+end
+
+always @ (posedge clk or negedge arst_n) begin
+   if (!arst_n) begin
+      push_cnt <= '0;
+      pop_cnt <= '0;
+   end else begin
+      if (push) begin
+         push_cnt <= push_cnt + 1;
+      end
+      if (pop_out) begin
+         pop_cnt <= pop_cnt + 1;
+      end
+   end
+end
+
 initial
 begin
   clk    = 1'b0;
   arst_n = 1'b0;
+  // 打开文件
+   f = $fopen(OUTPUT_FILE, "w");
  
   #400;
-  arst_n = 1'b1;
+  arst_n = 1'b1;   
 
   
-
-  #5000;   
+  #500000;
+  // 关闭文件
+   $fclose(f);
   $stop;
 
   end
+
 //-----------------------------------------------------------------------------
 // Functions and Tasks
 //-----------------------------------------------------------------------------
