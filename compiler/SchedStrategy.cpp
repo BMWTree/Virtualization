@@ -15,10 +15,11 @@ extern std::map<std::string, TreeNode> flowNodeMap;
 static long long curCycle;
 static long long cumulatePktNum;
 static long long pktId;
+static long long idle_cycle_cnt;
 
 const long long IDLECYCLE_BITS = 8;
 const long long MAX_IDLECYCLE = (1 << 8) - 1;
-const long long MAX_INTERVAL_IDLECYCLE = 200;
+const long long MAX_INTERVAL_IDLECYCLE = 99;
 
 SchedStrategy SchedStrategyUnknown(){
     SchedStrategy schedStrategy = new SchedStrategy_;
@@ -120,6 +121,10 @@ void tagPriorityTillRoot(TreeNode leafNode, std::vector<int>& priorityVec, unsig
 }
 
 void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, const unsigned char* packet) {
+    if(idle_cycle_cnt > 1800){
+        return;
+    }
+
     std::string flowId = getFlowId(user, pkthdr, packet);
 
     if(flowNodeMap.find(flowId) == flowNodeMap.end()){
@@ -143,6 +148,7 @@ void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, c
         cumulatePktNum = 0;
         if(curCycle != 0){
             std::cout << "type:0, idle_cycle:" << std::min(thisPacketCycle - curCycle - 1, MAX_INTERVAL_IDLECYCLE) << std::endl;
+            idle_cycle_cnt++;
         }else{
             std::cout << "type:0, idle_cycle:100" << std::endl;
         }
