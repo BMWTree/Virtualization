@@ -54,7 +54,7 @@ void app_main_loop_rx2flows(void)
         }
 
 
-        ipv4_5tuple = rte_pktmbuf_mtod_offset(worker_mbuf->array[0], struct ipv4_5tuple_host *, sizeof(struct rte_ether_hdr) + offsetof(struct rte_ipv4_hdr, time_to_live));
+        ipv4_5tuple = rte_pktmbuf_mtod_offset(worker_mbuf->array[0], struct ipv4_5tuple_host *, sizeof(struct ether_hdr) + offsetof(struct ipv4_hdr, time_to_live));
         for (int flow = 0; flow < 6; ++flow)
         {
             if (ipv4_5tuple->port_src == app.flow_src_ports[flow] || ipv4_5tuple->port_dst == app.flow_src_ports[flow])

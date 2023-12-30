@@ -29,42 +29,23 @@
 #	(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #	OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# include $(RTE_SDK)/mk/rte.vars.mk
+include $(RTE_SDK)/mk/rte.vars.mk
 
-# ifeq ($(CONFIG_RTE_LIBRTE_PIPELINE),y)
+ifeq ($(CONFIG_RTE_LIBRTE_PIPELINE),y)
 
-# #
-# # library name
-# #
-# APP = main
-
-# CFLAGS += -O3
-# CFLAGS += $(WERROR_FLAGS)
-
-# LDLIBS += -lconfuse
-
-# #
-# # all source are stored in SRCS-y
-# #
-# SRCS-y := main.c
-# SRCS-y += config.c
-# SRCS-y += init.c
-# SRCS-y += receive.c
-# SRCS-y += forwarding.c
-# SRCS-y += transmit.c
-# SRCS-y += output_queue.c
-# SRCS-y += flows2nodes.c
-# SRCS-y += rx2flows.c
-# SRCS-y += test.c
-
-# include $(RTE_SDK)/mk/rte.extapp.mk
-
-# endif
-
-# binary name
+#
+# library name
+#
 APP = main
 
+CFLAGS += -O3
+CFLAGS += $(WERROR_FLAGS)
+
+LDLIBS += -lconfuse
+
+#
 # all source are stored in SRCS-y
+#
 SRCS-y := main.c
 SRCS-y += config.c
 SRCS-y += init.c
@@ -76,39 +57,58 @@ SRCS-y += flows2nodes.c
 SRCS-y += rx2flows.c
 SRCS-y += test.c
 
-PKGCONF ?= pkg-config
+include $(RTE_SDK)/mk/rte.extapp.mk
 
-# Build using pkg-config variables if possible
-ifneq ($(shell $(PKGCONF) --exists libdpdk && echo 0),0)
-$(error "no installation of DPDK found")
 endif
 
-all: shared
-.PHONY: shared static
-shared: build/$(APP)-shared
-	ln -sf $(APP)-shared build/$(APP)
-static: build/$(APP)-static
-	ln -sf $(APP)-static build/$(APP)
+# # binary name
+# APP = main
 
-PC_FILE := $(shell $(PKGCONF) --path libdpdk 2>/dev/null)
-CFLAGS += -O3 $(shell $(PKGCONF) --cflags libdpdk)
-LDFLAGS_SHARED = $(shell $(PKGCONF) --libs libdpdk)
-LDFLAGS_SHARED += -lconfuse
-LDFLAGS_STATIC = $(shell $(PKGCONF) --static --libs libdpdk)
-LDFLAGS_STATIC += -lconfuse
+# # all source are stored in SRCS-y
+# SRCS-y := main.c
+# SRCS-y += config.c
+# SRCS-y += init.c
+# SRCS-y += receive.c
+# SRCS-y += forwarding.c
+# SRCS-y += transmit.c
+# SRCS-y += output_queue.c
+# SRCS-y += flows2nodes.c
+# SRCS-y += rx2flows.c
+# SRCS-y += test.c
 
-CFLAGS += -DALLOW_EXPERIMENTAL_API
+# PKGCONF ?= pkg-config
 
-build/$(APP)-shared: $(SRCS-y) Makefile $(PC_FILE) | build
-	$(CC) $(CFLAGS) $(SRCS-y) -o $@ $(LDFLAGS) $(LDFLAGS_SHARED)
+# # Build using pkg-config variables if possible
+# ifneq ($(shell $(PKGCONF) --exists libdpdk && echo 0),0)
+# $(error "no installation of DPDK found")
+# endif
 
-build/$(APP)-static: $(SRCS-y) Makefile $(PC_FILE) | build
-	$(CC) $(CFLAGS) $(SRCS-y) -o $@ $(LDFLAGS) $(LDFLAGS_STATIC)
+# all: shared
+# .PHONY: shared static
+# shared: build/$(APP)-shared
+# 	ln -sf $(APP)-shared build/$(APP)
+# static: build/$(APP)-static
+# 	ln -sf $(APP)-static build/$(APP)
 
-build:
-	@mkdir -p $@
+# PC_FILE := $(shell $(PKGCONF) --path libdpdk 2>/dev/null)
+# CFLAGS += -O3 $(shell $(PKGCONF) --cflags libdpdk)
+# LDFLAGS_SHARED = $(shell $(PKGCONF) --libs libdpdk)
+# LDFLAGS_SHARED += -lconfuse
+# LDFLAGS_STATIC = $(shell $(PKGCONF) --static --libs libdpdk)
+# LDFLAGS_STATIC += -lconfuse
 
-.PHONY: clean
-clean:
-	rm -f build/$(APP) build/$(APP)-static build/$(APP)-shared
-	test -d build && rmdir -p build || true
+# CFLAGS += -DALLOW_EXPERIMENTAL_API
+
+# build/$(APP)-shared: $(SRCS-y) Makefile $(PC_FILE) | build
+# 	$(CC) $(CFLAGS) $(SRCS-y) -o $@ $(LDFLAGS) $(LDFLAGS_SHARED)
+
+# build/$(APP)-static: $(SRCS-y) Makefile $(PC_FILE) | build
+# 	$(CC) $(CFLAGS) $(SRCS-y) -o $@ $(LDFLAGS) $(LDFLAGS_STATIC)
+
+# build:
+# 	@mkdir -p $@
+
+# .PHONY: clean
+# clean:
+# 	rm -f build/$(APP) build/$(APP)-static build/$(APP)-shared
+# 	test -d build && rmdir -p build || true
