@@ -87,7 +87,6 @@ void app_main_loop_forwarding(void)
 {
     app.cpu_freq[rte_lcore_id()] = rte_get_tsc_hz();
     app.fwd_item_valid_time = app.cpu_freq[rte_lcore_id()] / 1000 * VALID_TIME;
-    uint64_t rtt = app.cpu_freq[rte_lcore_id()] / 1000000 * app.rtt;
     if (forward == NULL)
     {
         if (!strcmp(app.inter_node, "SP"))
@@ -98,9 +97,16 @@ void app_main_loop_forwarding(void)
         }
         else if (!strcmp(app.intra_node, "WFQ"))
         {
-            forward = forward_WFQ;
+            forward = forward_WFQ; 
             for (int i = 0; i < 2; ++i)
+            {
+                peek_mbuf[i] = rte_malloc_socket(NULL, sizeof(struct app_mbuf_array),
+                                                 RTE_CACHE_LINE_SIZE, rte_socket_id());
+                if (peek_mbuf[i] == NULL)
+                    rte_panic("Worker thread: cannot allocate buffer space\n");
+                peek_valid[i] = 0;
                 WFQ_weight[i] = app.WFQ_weight[i];
+            }
         }
         for (int i = 0; i < 2; ++i)
         {
@@ -112,15 +118,6 @@ void app_main_loop_forwarding(void)
                                     RTE_CACHE_LINE_SIZE, rte_socket_id());
     if (worker_mbuf == NULL)
         rte_panic("Worker thread: cannot allocate buffer space\n");
-
-    for (int i = 0; i < 2; ++i)
-    {
-        peek_mbuf[i] = rte_malloc_socket(NULL, sizeof(struct app_mbuf_array),
-                                         RTE_CACHE_LINE_SIZE, rte_socket_id());
-        if (peek_mbuf[i] == NULL)
-            rte_panic("Worker thread: cannot allocate buffer space\n");
-        peek_valid[i] = 0;
-    }
 
     while (!force_quit)
     {
@@ -161,7 +158,7 @@ void forward_WFQ(void)
                 (void **)peek_mbuf[i]->array);
             if (ret == -ENOENT)
                 continue;
-            peek_valid[i]=1;
+            peek_valid[i] = 1;
         }
         struct ipv4_5tuple_host *ipv4_5tuple = rte_pktmbuf_mtod_offset(peek_mbuf[i]->array[0], struct ipv4_5tuple_host *, sizeof(struct ether_hdr) + offsetof(struct ipv4_hdr, time_to_live));
         struct flow_key key;
@@ -175,17 +172,17 @@ void forward_WFQ(void)
         estimate_departure[i] = value.arrival_timestamp + worker_mbuf->array[0]->pkt_len / bandwidth * 8 / 1000000 * app.cpu_freq[rte_lcore_id()];
         rte_hash_del_key(app.fwd_hash, &key);
     }
-    int ring_id=0;
-    for(int i=0;i>2;++i)
+    int ring_id = 0;
+    for (int i = 0; i < 2; ++i)
     {
-        if(peek_valid[i])
-            ring_id=i;
+        if (peek_valid[i])
+            ring_id = i;
     }
-    if(peek_valid[0]&&peek_valid[1])
-        ring_id = estimate_departure[0] < estimate_departure[1] ? 0:1;
-    if(peek_valid[0]||peek_valid[1])
+    if (peek_valid[0] && peek_valid[1])
+        ring_id = estimate_departure[0] < estimate_departure[1] ? 0 : 1;
+    if (peek_valid[0] || peek_valid[1])
     {
         packet_enqueue(app.default_port, peek_mbuf[ring_id]->array[0]);
-        peek_valid[ring_id]=0;
+        peek_valid[ring_id] = 0;
     }
 }

@@ -45,4 +45,23 @@ priority_flow_3=1
 priority_flow_4=2
 priority_flow_5=3
 
+# WFQ params
+weight_node_0=1
+weight_node_1=1
 
+weight_flow_0=1
+weight_flow_1=1
+weight_flow_2=2
+
+weight_flow_3=1
+weight_flow_4=1
+weight_flow_5=2
+
+# PFabric params
+flow_size_0=15000
+flow_size_1=15000
+flow_size_2=15000
+
+flow_size_3=15000
+flow_size_4=15000
+flow_size_5=15000

@@ -6,16 +6,13 @@ void app_main_loop_rx2flows(void)
     uint32_t i;
     int dst_port;
     struct ipv4_5tuple_host *ipv4_5tuple;
-    int default_port;
 
-    default_port = app.default_port;
     srand((unsigned)time(NULL));
     RTE_LOG(INFO, SWITCH, "Core %u is doing rx2flows\n",
             rte_lcore_id());
 
     app.cpu_freq[rte_lcore_id()] = rte_get_tsc_hz();
     app.fwd_item_valid_time = app.cpu_freq[rte_lcore_id()] / 1000 * VALID_TIME;
-    uint64_t rtt = app.cpu_freq[rte_lcore_id()] / 1000000 * app.rtt;
 
     if (app.log_qlen)
     {
@@ -55,8 +52,10 @@ void app_main_loop_rx2flows(void)
 
 
         ipv4_5tuple = rte_pktmbuf_mtod_offset(worker_mbuf->array[0], struct ipv4_5tuple_host *, sizeof(struct ether_hdr) + offsetof(struct ipv4_hdr, time_to_live));
-        for (int flow = 0; flow < 6; ++flow)
+        int flow;
+        for (flow = 0; flow < 6; ++flow)
         {
+            RTE_LOG(DEBUG,SWITCH,"New packet %d:%d -> %d:%d\n",ipv4_5tuple->ip_src,ipv4_5tuple->port_src,ipv4_5tuple->ip_dst,ipv4_5tuple->port_dst);
             if (ipv4_5tuple->port_src == app.flow_src_ports[flow] || ipv4_5tuple->port_dst == app.flow_src_ports[flow])
             {
                 struct flow_key key;
@@ -73,5 +72,7 @@ void app_main_loop_rx2flows(void)
                 break;
             }
         }
+        if(flow==6)
+            packet_enqueue(app.default_port,worker_mbuf->array[0]);
     }
 }

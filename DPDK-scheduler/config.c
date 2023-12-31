@@ -129,6 +129,12 @@ app_read_config_file(const char *fname)
         CFG_SIMPLE_INT("weight_flow_3",&app_cfg.WFQ_weight[5]),
         CFG_SIMPLE_INT("weight_flow_4",&app_cfg.WFQ_weight[6]),
         CFG_SIMPLE_INT("weight_flow_5",&app_cfg.WFQ_weight[7]),
+        CFG_SIMPLE_INT("flow_size_0",&app_cfg.pFabric_size[0]),
+        CFG_SIMPLE_INT("flow_size_1",&app_cfg.pFabric_size[1]),
+        CFG_SIMPLE_INT("flow_size_2",&app_cfg.pFabric_size[2]),
+        CFG_SIMPLE_INT("flow_size_3",&app_cfg.pFabric_size[3]),
+        CFG_SIMPLE_INT("flow_size_4",&app_cfg.pFabric_size[4]),
+        CFG_SIMPLE_INT("flow_size_5",&app_cfg.pFabric_size[5]),
         CFG_SIMPLE_STR("inter_node",&app_cfg.inter_node),
         CFG_SIMPLE_STR("intra_node",&app_cfg.intra_node),
         CFG_SIMPLE_INT("default_port", &app_cfg.default_port),
@@ -286,6 +292,7 @@ app_read_config_file(const char *fname)
     {
         app.SP_priority[i]=app_cfg.SP_priority[i];
         app.WFQ_weight[i]=app_cfg.WFQ_weight[i];
+        app.pFabric_size[i]=app_cfg.pFabric_size[i];
     }    
     
     cfg_free(app_cfg.cfg);
