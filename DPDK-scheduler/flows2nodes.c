@@ -16,7 +16,8 @@ int pFabric_size[3];
 
 void app_main_loop_flows2nodes(int nodeid)
 {
-
+    RTE_LOG(INFO, SWITCH, "Core %u is doing flows2nodes %d\n",
+            rte_lcore_id(), nodeid);
     if (flows2nodes == NULL)
     {
         if (!strcmp(app.intra_node, "SP"))
@@ -131,27 +132,26 @@ void flows2nodes_WFQ(void)
 void flows2nodes_pFabric(void)
 {
     int ring = 0;
-    int max_size = INT_MIN;
+    int min_size = INT_MAX;
     for (int i = 0; i < 3; ++i)
     {
-        if (pFabric_size[i] > max_size)
+        if (pFabric_size[i] < min_size)
         {
             ring = i;
-            max_size = pFabric_size[i];
+            min_size = pFabric_size[i];
         }
     }
-
     for (int i = 0; i < 2; ++i)
     {
         int ret = rte_ring_sc_dequeue(
             input_rings[ring],
             (void **)worker_mbuf->array);
-        if (ret != -ENOENT)
+        if (ret == -ENOENT)
         {
-            pFabric_size[ring] -= worker_mbuf->array[0]->pkt_len;
-            packet_enqueue(app.default_port, worker_mbuf->array[0]);
-            return;
+            ring = (ring + 1) % 3;
+            continue;
         }
-        ring = (ring + 1) % 3;
+        pFabric_size[ring] -= worker_mbuf->array[0]->pkt_len;
+        packet_enqueue(app.default_port, worker_mbuf->array[0]);
     }
 }

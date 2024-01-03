@@ -11,14 +11,14 @@ static void init_tx(int port_id) {
     uint64_t tx_rate_scale = 0;
     uint64_t tx_rate_bps, target_tx_rate_bps;
 
-    tx_rate_scale = (((app.tx_rate_mbps_vector[port_id] >> 3) * (uint64_t)1e6) << RATE_SCALE) / cpu_freq;
+    tx_rate_scale = (((app.tx_rate_mbps >> 3) * (uint64_t)1e6) << RATE_SCALE) / cpu_freq;
     app.cpu_freq[lcore] = cpu_freq;
     app.prev_time[port_id] = current_time;
     app.token[port_id] = app.bucket_size;
     app.core_tx[port_id] = lcore;
     app.tx_rate_scale[port_id] = tx_rate_scale;
     tx_rate_bps = (app.tx_rate_scale[port_id] * 8 * rte_get_tsc_hz())>>RATE_SCALE;
-    target_tx_rate_bps = app.tx_rate_mbps_vector[port_id] * (uint64_t)1e6;
+    target_tx_rate_bps = app.tx_rate_mbps * (uint64_t)1e6;
     RTE_LOG(
         INFO, SWITCH,
         "%s: actual tx_rate of port %u: %lubps=%luMbps\n",
@@ -74,7 +74,7 @@ void app_main_tx_port(uint32_t port_id) {
     n_mbufs = app.mbuf_tx[port_id].n_mbufs;
 
     current_time = rte_get_tsc_cycles();
-    if (app.tx_rate_mbps_vector[port_id] > 0) {
+    if (app.tx_rate_mbps > 0) {
         // tbf: generate tokens
         token += ((tx_rate_scale * (current_time - prev_time)) >> RATE_SCALE);
         token = MIN(token, (app.bucket_size<<1));
@@ -95,7 +95,7 @@ void app_main_tx_port(uint32_t port_id) {
     pkt = app.mbuf_tx[port_id].array[n_mbufs];
     app.qlen_bytes_out[port_id] += pkt->pkt_len;
     app.qlen_pkts_out[port_id] ++;
-    if (app.tx_rate_mbps_vector[port_id] > 0) {
+    if (app.tx_rate_mbps > 0) {
         token -= pkt->pkt_len;
         app.token[port_id] = token;
     }

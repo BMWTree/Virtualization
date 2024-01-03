@@ -40,6 +40,7 @@ APP = main
 
 CFLAGS += -O3
 CFLAGS += $(WERROR_FLAGS)
+CFLAGS += -g
 
 LDLIBS += -lconfuse
 

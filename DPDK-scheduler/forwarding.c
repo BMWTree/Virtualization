@@ -85,6 +85,8 @@ int peek_valid[2];
 
 void app_main_loop_forwarding(void)
 {
+    RTE_LOG(INFO, SWITCH, "Core %u is doing forwarding\n",
+            rte_lcore_id());
     app.cpu_freq[rte_lcore_id()] = rte_get_tsc_hz();
     app.fwd_item_valid_time = app.cpu_freq[rte_lcore_id()] / 1000 * VALID_TIME;
     if (forward == NULL)
@@ -95,7 +97,7 @@ void app_main_loop_forwarding(void)
             for (int i = 0; i < 2; ++i)
                 SP_priority[i] = app.SP_priority[i];
         }
-        else if (!strcmp(app.intra_node, "WFQ"))
+        else if (!strcmp(app.inter_node, "WFQ"))
         {
             forward = forward_WFQ; 
             for (int i = 0; i < 2; ++i)
