@@ -100,7 +100,7 @@
 #define VALID_TIME INT_MAX // valid time (in ms) for a forwarding item
 #define MEAN_PKT_SIZE 800  // used for calculate ring length and # of mbuf pools
 #define RATE_SCALE 20      // the scale of tx rate
-
+#define TIME_SLEEP_US 10
 #define MIN(a, b) \
     ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
@@ -111,6 +111,11 @@ struct app_mbuf_array
 {
     struct rte_mbuf *array[APP_MBUF_ARRAY_SIZE];
     uint16_t n_mbufs;
+};
+struct ring_obj
+{
+    struct rte_mbuf *mbuf;
+    uint64_t timestamp;
 };
 
 #ifndef APP_MAX_PORTS
@@ -287,11 +292,13 @@ struct ipv4_5tuple_host
     uint32_t ip_dst;
     uint16_t port_src;
     uint16_t port_dst;
+    uint32_t seq;
 };
 struct flow_key
 {
     uint32_t ip;
     uint16_t port;
+    uint32_t seq;
 };
 enum forwarding_policy{
     Letflow=0,
@@ -319,9 +326,27 @@ void app_main_loop_rx2flows(void);
 void app_main_loop_flows2nodes(int nodeid);
 void forward_SP(void);
 void forward_WFQ(void);
-void flows2nodes_SP(void);
-void flows2nodes_WFQ(void);
-void flows2nodes_pFabric(void);
+
+
+struct flows2nodes_context
+{
+    struct rte_ring *input_rings[3];
+    struct rte_ring *output_ring;
+    void (*flows2nodes)(struct flows2nodes_context *);
+    struct ring_obj *worker_mbuf;
+
+    // SP
+    int SP_priority[3];
+    // WFQ
+    int WFQ_weight[3];
+    struct ring_obj *peek_mbuf[3];
+    int peek_valid[3];
+    // pFabric
+    int pFabric_size[3];
+};
+void flows2nodes_SP(struct flows2nodes_context*);
+void flows2nodes_WFQ(struct flows2nodes_context*);
+void flows2nodes_pFabric(struct flows2nodes_context*);
 
 /*
  * Initialize forwarding table.
@@ -363,8 +388,6 @@ uint32_t qlen_threshold_equal_division(uint32_t port_id);
 uint32_t qlen_threshold_dt(uint32_t port_id);
 
 
-
-void flows2nodes_SP(void);
 
 #define APP_FLUSH 0
 #ifndef APP_FLUSH

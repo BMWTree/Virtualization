@@ -6,7 +6,8 @@ void app_main_loop_rx2flows(void)
     uint32_t i;
     int dst_port;
     struct ipv4_5tuple_host *ipv4_5tuple;
-
+    struct flow_key key;
+    struct app_fwd_table_item value;
     srand((unsigned)time(NULL));
     RTE_LOG(INFO, SWITCH, "Core %u is doing rx2flows\n",
             rte_lcore_id());
@@ -27,6 +28,8 @@ void app_main_loop_rx2flows(void)
     }
     worker_mbuf = rte_malloc_socket(NULL, sizeof(struct app_mbuf_array),
                                     RTE_CACHE_LINE_SIZE, rte_socket_id());
+    struct ring_obj *obj = rte_malloc_socket(NULL, sizeof(struct ring_obj),
+                                             RTE_CACHE_LINE_SIZE, rte_socket_id());
     if (worker_mbuf == NULL)
         rte_panic("Worker thread: cannot allocate buffer space\n");
 
@@ -46,33 +49,50 @@ void app_main_loop_rx2flows(void)
         if (i != app.port)
         {
             dst_port = app.port;
-            packet_enqueue(dst_port,worker_mbuf->array[0]);
+            packet_enqueue(dst_port, worker_mbuf->array[0]);
             continue;
         }
-
 
         ipv4_5tuple = rte_pktmbuf_mtod_offset(worker_mbuf->array[0], struct ipv4_5tuple_host *, sizeof(struct ether_hdr) + offsetof(struct ipv4_hdr, time_to_live));
         int flow;
         for (flow = 0; flow < 6; ++flow)
         {
-            RTE_LOG(DEBUG,SWITCH,"New packet %d:%d -> %d:%d\n",ipv4_5tuple->ip_src,ipv4_5tuple->port_src,ipv4_5tuple->ip_dst,ipv4_5tuple->port_dst);
-            if (ipv4_5tuple->port_src == app.flow_src_ports[flow] || ipv4_5tuple->port_dst == app.flow_src_ports[flow])
+            uint16_t src_port = rte_be_to_cpu_16(ipv4_5tuple->port_src), dst_port = rte_be_to_cpu_16(ipv4_5tuple->port_dst);
+            struct in_addr src_ip_addr, dst_ip_addr;
+            src_ip_addr.s_addr = ipv4_5tuple->ip_src;
+            dst_ip_addr.s_addr = ipv4_5tuple->ip_dst;
+            if (src_port == app.flow_src_ports[flow] || dst_port == app.flow_src_ports[flow])
             {
-                struct flow_key key;
-                key.ip=ipv4_5tuple->ip_src;
-                key.port=ipv4_5tuple->port_src;
-                struct app_fwd_table_item value;
-                value.arrival_timestamp=rte_get_tsc_cycles();
-                app_fwd_learning(&key,&value);
-                rte_ring_sp_enqueue(app.rings_flows[flow], worker_mbuf->array[0]);
+                RTE_LOG(DEBUG, SWITCH, "New packet %s:%d -> %s:%d\n", inet_ntoa(src_ip_addr), src_port, inet_ntoa(dst_ip_addr), dst_port);
+                // key.ip = ipv4_5tuple->ip_src;
+                // key.port = ipv4_5tuple->port_src;
+                // key.seq = ipv4_5tuple->seq;
+                // value.arrival_timestamp = rte_get_tsc_cycles();
+                // if (!strcmp(app.intra_node, "WFQ")||!strcmp(app.inter_node, "WFQ"))
+                //     if (app_fwd_learning(&key, &value) < 0)
+                //     {
+                //         packet_enqueue(app.default_port, worker_mbuf->array[0]);
+                //         break;
+                //     }
+                // rte_ring_sp_enqueue(app.rings_flows[flow], worker_mbuf->array[0]);
+                
+                obj->mbuf=worker_mbuf->array[0];
+                obj->timestamp=rte_get_tsc_cycles();
+                rte_ring_sp_enqueue(app.rings_flows[flow], obj);
                 RTE_LOG(
                     DEBUG, SWITCH,
-                    "%s: Port %d: forward packet to ring flow %d\n",
-                    __func__, i, flow);
+                    "%s: Port %d: forward packet to %s\n",
+                    __func__, i, app.rings_flows[flow]->name);
                 break;
             }
         }
-        if(flow==6)
-            packet_enqueue(app.default_port,worker_mbuf->array[0]);
+        if (flow == 6)
+        {
+            RTE_LOG(
+                DEBUG, SWITCH,
+                "%s: Port %d: forward packet to port %d\n",
+                __func__, i, app.default_port);
+            packet_enqueue(app.default_port, worker_mbuf->array[0]);
+        }
     }
 }

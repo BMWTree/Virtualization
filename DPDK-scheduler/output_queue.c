@@ -80,7 +80,7 @@ int packet_enqueue(uint32_t dst_port, struct rte_mbuf *pkt) {
         if (enque_ret != 0) {
             RTE_LOG(
                 ERR, SWITCH,
-                "%s: packet cannot enqueue in port %u",
+                "%s: packet cannot enqueue in port %u\n",
                 __func__, app.ports[dst_port]
             );
         }

@@ -286,15 +286,18 @@ app_read_config_file(const char *fname)
     app.output_interval=app_cfg.output_interval;
     app.inter_node=app_cfg.inter_node;
     app.intra_node=app_cfg.intra_node;
-    for(int i=0;i<6;++i)
-        app.flow_src_ports[i]=app_cfg.flow_src_ports[i];
-    for(int i=0;i<8;++i)
+    for (int i = 0; i < 6; ++i)
     {
-        app.SP_priority[i]=app_cfg.SP_priority[i];
-        app.WFQ_weight[i]=app_cfg.WFQ_weight[i];
-        app.pFabric_size[i]=app_cfg.pFabric_size[i];
-    }    
-    
+        app.pFabric_size[i] = app_cfg.pFabric_size[i];
+        app.flow_src_ports[i] = app_cfg.flow_src_ports[i];
+    }
+
+    for (int i = 0; i < 8; ++i)
+    {
+        app.SP_priority[i] = app_cfg.SP_priority[i];
+        app.WFQ_weight[i] = app_cfg.WFQ_weight[i];
+    }
+
     cfg_free(app_cfg.cfg);
     free(app_cfg.bm_policy);
     free(app_cfg.qlen_fname);

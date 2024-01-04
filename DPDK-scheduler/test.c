@@ -32,7 +32,7 @@ void app_main_loop_test(void)
             {
                 if(i==0)
                 {
-                    RTE_LOG(INFO,SWITCH,"qlen: %-4dB, %-4dB, %-4dB, %-4dB\n",get_qlen_bytes(1),get_qlen_bytes(2),get_qlen_bytes(3),get_qlen_bytes(4));
+                    RTE_LOG(INFO,SWITCH,"qlen: %-4dB, %d,%d,%d,%d,%d,%d\n",get_qlen_bytes(1),rte_ring_count(app.rings_flows[0]),rte_ring_count(app.rings_flows[0]),rte_ring_count(app.rings_flows[0]),rte_ring_count(app.rings_flows[0]),rte_ring_count(app.rings_flows[0]),rte_ring_count(app.rings_flows[0]));
                 }
                 irate = (port_stats.ibytes - port_stats_vector[i].ibytes)  * 8.0 / 1000000;
                 orate = (port_stats.obytes - port_stats_vector[i].obytes)  * 8.0 / 1000000;
