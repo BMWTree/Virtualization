@@ -91,21 +91,10 @@ void flows2nodes_WFQ(struct flows2nodes_context *context)
                 (void **)&context->peek_mbuf[i]);
             if (ret == -ENOENT)
                 continue;
-            // printf("%d,%lu\n",context->peek_mbuf[i]->mbuf->pkt_len,context->peek_mbuf[i]->timestamp);
             context->peek_valid[i] = 1;
         }
-        // struct ipv4_5tuple_host *ipv4_5tuple = rte_pktmbuf_mtod_offset(context->peek_mbuf[i]->mbuf, struct ipv4_5tuple_host *, sizeof(struct ether_hdr) + offsetof(struct ipv4_hdr, time_to_live));
-        // struct flow_key key;
-        // key.ip = ipv4_5tuple->ip_src;
-        // key.port = ipv4_5tuple->port_src;
-        // key.seq = ipv4_5tuple->seq;
-        // struct app_fwd_table_item value;
-        // if (app_fwd_lookup(&key, &value) < 0)
-        //     value.arrival_timestamp = 0;
-
         uint64_t arrival_timestamp=context->peek_mbuf[i]->timestamp;
         double bandwidth = context->WFQ_weight[i] * 1.0 / (context->WFQ_weight[0] + context->WFQ_weight[1]) * app.tx_rate_mbps;
-        // printf("%f,%lu\n",bandwidth,app.cpu_freq[rte_lcore_id()]);
         uint64_t estimate_tx=(uint64_t)(context->peek_mbuf[i]->mbuf->pkt_len / bandwidth * 8 / 1000000 * app.cpu_freq[rte_lcore_id()]);
         estimate_departure[i] = arrival_timestamp + estimate_tx;
         // printf("%s:%lu + %lu = %lu, weight=%d, pkt len=%d\n",__func__,arrival_timestamp, estimate_tx, estimate_departure[i],context->WFQ_weight[i],context->peek_mbuf[i]->mbuf->pkt_len);
@@ -115,8 +104,6 @@ void flows2nodes_WFQ(struct flows2nodes_context *context)
     uint64_t min_departure = UINT64_MAX;
     for (int i = 0; i < 3; ++i)
     {
-        // if (context->peek_valid[i])
-        //     printf("ring %d: time %lu\n", i, estimate_departure[i]);
         if (context->peek_valid[i] && estimate_departure[i] < min_departure)
         {
             min_departure = estimate_departure[i];

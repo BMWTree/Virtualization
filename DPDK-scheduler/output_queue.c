@@ -72,7 +72,7 @@ int packet_enqueue(uint32_t dst_port, struct rte_mbuf *pkt) {
         }
         /* end */
     }
-    if (ret == 0) {
+    if (ret == 0||true) {
         int enque_ret = rte_ring_sp_enqueue(
             app.rings_tx[dst_port],
             pkt

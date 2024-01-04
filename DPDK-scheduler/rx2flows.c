@@ -36,10 +36,6 @@ void app_main_loop_rx2flows(void)
     for (i = 0; !force_quit; i = (i + 1) % app.n_ports)
     {
         int ret;
-        /*ret = rte_ring_sc_dequeue_bulk(
-            app.rings_rx[i],
-            (void **) worker_mbuf->array,
-            app.burst_size_worker_read);*/
         ret = rte_ring_sc_dequeue(
             app.rings_rx[i],
             (void **)worker_mbuf->array);
@@ -64,18 +60,7 @@ void app_main_loop_rx2flows(void)
             if (src_port == app.flow_src_ports[flow] || dst_port == app.flow_src_ports[flow])
             {
                 RTE_LOG(DEBUG, SWITCH, "New packet %s:%d -> %s:%d\n", inet_ntoa(src_ip_addr), src_port, inet_ntoa(dst_ip_addr), dst_port);
-                // key.ip = ipv4_5tuple->ip_src;
-                // key.port = ipv4_5tuple->port_src;
-                // key.seq = ipv4_5tuple->seq;
-                // value.arrival_timestamp = rte_get_tsc_cycles();
-                // if (!strcmp(app.intra_node, "WFQ")||!strcmp(app.inter_node, "WFQ"))
-                //     if (app_fwd_learning(&key, &value) < 0)
-                //     {
-                //         packet_enqueue(app.default_port, worker_mbuf->array[0]);
-                //         break;
-                //     }
-                // rte_ring_sp_enqueue(app.rings_flows[flow], worker_mbuf->array[0]);
-                
+
                 obj->mbuf=worker_mbuf->array[0];
                 obj->timestamp=rte_get_tsc_cycles();
                 rte_ring_sp_enqueue(app.rings_flows[flow], obj);

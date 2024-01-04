@@ -100,7 +100,7 @@
 #define VALID_TIME INT_MAX // valid time (in ms) for a forwarding item
 #define MEAN_PKT_SIZE 800  // used for calculate ring length and # of mbuf pools
 #define RATE_SCALE 20      // the scale of tx rate
-#define TIME_SLEEP_US 10
+#define TIME_SLEEP_US 0
 #define MIN(a, b) \
     ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
