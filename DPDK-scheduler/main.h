@@ -100,7 +100,7 @@
 #define VALID_TIME INT_MAX // valid time (in ms) for a forwarding item
 #define MEAN_PKT_SIZE 800  // used for calculate ring length and # of mbuf pools
 #define RATE_SCALE 20      // the scale of tx rate
-#define TIME_SLEEP_US 0
+
 #define MIN(a, b) \
     ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
@@ -111,11 +111,6 @@ struct app_mbuf_array
 {
     struct rte_mbuf *array[APP_MBUF_ARRAY_SIZE];
     uint16_t n_mbufs;
-};
-struct ring_obj
-{
-    struct rte_mbuf *mbuf;
-    uint64_t timestamp;
 };
 
 #ifndef APP_MAX_PORTS
@@ -333,13 +328,13 @@ struct flows2nodes_context
     struct rte_ring *input_rings[3];
     struct rte_ring *output_ring;
     void (*flows2nodes)(struct flows2nodes_context *);
-    struct ring_obj *worker_mbuf;
+    struct app_mbuf_array *worker_mbuf;
 
     // SP
     int SP_priority[3];
     // WFQ
     int WFQ_weight[3];
-    struct ring_obj *peek_mbuf[3];
+    struct app_mbuf_array *peek_mbuf[3];
     int peek_valid[3];
     // pFabric
     int pFabric_size[3];

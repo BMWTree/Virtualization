@@ -28,8 +28,6 @@ void app_main_loop_rx2flows(void)
     }
     worker_mbuf = rte_malloc_socket(NULL, sizeof(struct app_mbuf_array),
                                     RTE_CACHE_LINE_SIZE, rte_socket_id());
-    struct ring_obj *obj = rte_malloc_socket(NULL, sizeof(struct ring_obj),
-                                             RTE_CACHE_LINE_SIZE, rte_socket_id());
     if (worker_mbuf == NULL)
         rte_panic("Worker thread: cannot allocate buffer space\n");
 
@@ -61,9 +59,7 @@ void app_main_loop_rx2flows(void)
             {
                 RTE_LOG(DEBUG, SWITCH, "New packet %s:%d -> %s:%d\n", inet_ntoa(src_ip_addr), src_port, inet_ntoa(dst_ip_addr), dst_port);
 
-                obj->mbuf=worker_mbuf->array[0];
-                obj->timestamp=rte_get_tsc_cycles();
-                rte_ring_sp_enqueue(app.rings_flows[flow], obj);
+                rte_ring_sp_enqueue(app.rings_flows[flow], worker_mbuf->array[0]);
                 RTE_LOG(
                     DEBUG, SWITCH,
                     "%s: Port %d: forward packet to %s\n",
