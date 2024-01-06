@@ -92,6 +92,19 @@ std::string getTraceFileName(std::string inputFileName){
     return outputFileName;
 }
 
+std::string getRefFileName(std::string inputFileName){
+    // 查找 ".output" 的位置
+    size_t dotPos = inputFileName.find(".output");
+
+    assert(dotPos != std::string::npos);
+
+    // 用 ".ref" 替换 ".output"
+    std::string outputFileName = inputFileName;
+    outputFileName.replace(dotPos, 7, ".ref");
+
+    return outputFileName;
+}
+
 void extractFlowIdHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, const unsigned char* packet) {
     static std::set<std::string> flowIdSet;
 

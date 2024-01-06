@@ -19,7 +19,8 @@ static long long idle_cycle_cnt;
 
 const long long IDLECYCLE_BITS = 8;
 const long long MAX_IDLECYCLE = (1 << 8) - 1;
-const long long MAX_INTERVAL_IDLECYCLE = 99;
+const long long MAX_INTERVAL_IDLECYCLE = 107;
+const long long PUSH_POP_INTERVAL_IDLECYCLE = 13;
 
 SchedStrategy SchedStrategyUnknown(){
     SchedStrategy schedStrategy = new SchedStrategy_;
@@ -121,7 +122,7 @@ void tagPriorityTillRoot(TreeNode leafNode, std::vector<int>& priorityVec, unsig
 }
 
 void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, const unsigned char* packet) {
-    if(idle_cycle_cnt > 1800){
+    if(idle_cycle_cnt > 400){
         return;
     }
 
@@ -142,6 +143,7 @@ void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, c
     assert(thisPacketCycle >= curCycle);
 
     if(thisPacketCycle - curCycle > 1){
+        std::cout << "type:0, idle_cycle:" << PUSH_POP_INTERVAL_IDLECYCLE << std::endl;
         for(long long i=0; i<cumulatePktNum; i++){
             std::cout << "type:2" << std::endl;
         }
@@ -158,7 +160,8 @@ void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, c
     curCycle = thisPacketCycle;
     // std::cout << "type:1, priority:"<< priorityVec[1] <<", tree_id:" << leafNode->nodeId << ", data_meta:1, data_payload:" << priorityVec[0] << "\n";
     // std::cout << "type:2\n";
-    std::cout << "type:1, tree_id:" << leafNode->nodeId << ", meta:" << pktId++;
+    // std::cout << "type:1, tree_id:" << leafNode->nodeId << ", meta:" << pktId++;
+    std::cout << "type:1, tree_id:" << leafNode->nodeId << ", meta:" << 0;
     for(size_t i=0; i<priorityVec.size(); i++){
         std::cout << ", priority" << i << ":" << priorityVec[i];
     }
