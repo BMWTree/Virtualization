@@ -3,7 +3,7 @@ import argparse
 TREE_NUM_BITS = 2
 IDLECYCLE_BITS = 8
 PTW = 24
-MTW = 2
+MTW = 13
 
 ROM_SIZE = 16384
 

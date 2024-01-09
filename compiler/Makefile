@@ -13,9 +13,10 @@ run: $(patsubst $(TESTCASE_DIR)/%.cpp,$(TESTCASE_DIR)/%.tb,$(TESTCASES))
 
 $(TESTCASE_DIR)/%.tb: $(TESTCASE_DIR)/%.output vPIFO_trace.exe ref2mem.py trace2mem.py draw_path_table.py
 	./vPIFO_trace.exe $<
-	python3 ref2mem.py $<
-	python3 trace2mem.py $<
-	python3 draw_path_table.py $< $@
+#	python3 ref2mem.py $<
+#	python3 trace2mem.py $<
+	python3 draw.py $<
+#	python3 draw_path_table.py $< $@
 	rm $<
 
 vPIFO_trace.exe: vPIFO_trace.cpp util.o

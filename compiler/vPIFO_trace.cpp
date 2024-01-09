@@ -156,6 +156,8 @@ void pop_task (int i) {
 // To speed up the simulation, skip the idle phase with a flag
 long long skipping_flag = 0;
 long long cycle = 1;
+long long push_cnt = 0;
+long long pop_cnt = 0;
 int type, treeid, meta, p0, p1;
 string type_s, idle_s, treeid_s, meta_s, p0_s, p1_s;
 
@@ -170,6 +172,20 @@ int get_number(string s, int skip_num) {
             ret = ret * 10 + s[i] - '0';
         }
     return ret;
+}
+
+// void write_push_line(int meta) {
+//     printf("meta:%d, push_cyc:%lld\n", meta, push_cnt++);
+// }
+// void write_pop_line(int meta) {
+//     printf("meta:%d, pop_cyc:%lld\n", meta, pop_cnt++);
+// }
+
+void write_pop_line1(int meta) {
+    printf("meta:%d, push_cyc:%lld\n", meta, pop_cnt++);
+}
+void write_pop_line2(int meta, int priority) {
+    printf("meta:%d, pop_cyc:%d\n", meta, priority);
 }
 
 // To csl: input is here!
@@ -190,6 +206,7 @@ int read_line() {
             p0 = get_number(p0_s, 1);
             p1 = get_number(p1_s, 1);
             push_task(treeid % N, (Task){Push, treeid, p0, meta});
+            // write_push_line(meta);
             push_task(0, (Task){Push, 0, p1, treeid});
             task_num[0]++, task_num[treeid]++;
             /* printf("log: read push treeid %d, meta %d, p0 %d, p1 %d\n",
@@ -207,13 +224,12 @@ int read_line() {
 }
 
 // To csl: output is here!
-long long pop_cnt = 0;
-void write_line(int priority) {
-    printf("%d", priority);
-    // printf(" %llx", pop_cnt++);
-    // printf(" %lld", cycle);
-    printf("\n");
-}
+// void write_line(int priority) {
+//     printf("%d", priority);
+//     // printf(" %llx", pop_cnt++);
+//     // printf(" %lld", cycle);
+//     printf("\n");
+// }
 
 
 int main(int argc, char * argv[]) {
@@ -268,7 +284,10 @@ int main(int argc, char * argv[]) {
                         pop_sum++;
                         pop_num[RPU[i].root]++;
                         // printf("Tree %d, ", i);
-                        write_line(pa.first);
+                        // write_line(pa.first);
+                        // printf("%d\n", pa.first);
+                        write_pop_line1(pa.second);
+                        write_pop_line2(pa.second, pa.first);
                     }
                 }
                 else if (RPU[i].root != 0) {

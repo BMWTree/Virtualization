@@ -5,6 +5,8 @@
 
 using namespace std;
 
+extern map<string, int> FidMap;
+
 int main(int argc, char * argv[]){
 
     TreeNode root = createTreeRoot(SchedStrategySP(SchedStrategySP()), createPerfInfo(100));
@@ -26,6 +28,19 @@ int main(int argc, char * argv[]){
     attachFlow("10.1.4.2, 10.1.1.1, 8080, 49155, TCP", normal_user, 3);
     attachFlow("10.1.5.2, 10.1.2.1, 8080, 49155, TCP", vip_user, 3);
 
+    FidMap["10.1.1.1, 10.1.4.2, 49153, 8080, TCP"] = 0;
+    FidMap["10.1.2.1, 10.1.5.2, 49153, 8080, TCP"] = 1;
+    FidMap["10.1.1.1, 10.1.4.2, 49154, 8080, TCP"] = 2;
+    FidMap["10.1.2.1, 10.1.5.2, 49154, 8080, TCP"] = 3;
+    FidMap["10.1.1.1, 10.1.4.2, 49155, 8080, TCP"] = 4;
+    FidMap["10.1.2.1, 10.1.5.2, 49155, 8080, TCP"] = 5;
+    FidMap["10.1.4.2, 10.1.1.1, 8080, 49153, TCP"] = 0;
+    FidMap["10.1.5.2, 10.1.2.1, 8080, 49153, TCP"] = 1;
+    FidMap["10.1.4.2, 10.1.1.1, 8080, 49154, TCP"] = 2;
+    FidMap["10.1.5.2, 10.1.2.1, 8080, 49154, TCP"] = 3;
+    FidMap["10.1.4.2, 10.1.1.1, 8080, 49155, TCP"] = 4;
+    FidMap["10.1.5.2, 10.1.2.1, 8080, 49155, TCP"] = 5;
+
     bool hasPFabric = false;
     checkMakeTree(root, hasPFabric);
 
@@ -39,6 +54,8 @@ int main(int argc, char * argv[]){
     std::string inputFileName = argv[1];
     std::string outputFileName = getTraceFileName(inputFileName);
     tagPriority("../trace/PcapTrace-6-3.pcap", outputFileName.c_str(), hasPFabric);
+    outputFileName = getPFMapFileName(inputFileName);
+    printPFMap("../trace/PcapTrace-6-3.pcap", outputFileName.c_str());
     
     return 0;
 }

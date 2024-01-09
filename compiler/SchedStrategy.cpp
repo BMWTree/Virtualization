@@ -10,7 +10,10 @@
 #include "SP.h"
 #include "WFQ.h"
 
+#define CUM_POP 1
+
 extern std::map<std::string, TreeNode> flowNodeMap;
+std::map<std::string, int> FidMap;
 
 static long long curCycle;
 static long long cumulatePktNum;
@@ -121,6 +124,8 @@ void tagPriorityTillRoot(TreeNode leafNode, std::vector<int>& priorityVec, unsig
     }
 }
 
+#if CUM_POP
+
 void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, const unsigned char* packet) {
     if(idle_cycle_cnt > 400){
         return;
@@ -131,7 +136,6 @@ void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, c
     if(flowNodeMap.find(flowId) == flowNodeMap.end()){
         return;
     }
-    assert(flowNodeMap.find(flowId) != flowNodeMap.end());
 
     TreeNode leafNode = flowNodeMap[flowId];
 
@@ -160,8 +164,8 @@ void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, c
     curCycle = thisPacketCycle;
     // std::cout << "type:1, priority:"<< priorityVec[1] <<", tree_id:" << leafNode->nodeId << ", data_meta:1, data_payload:" << priorityVec[0] << "\n";
     // std::cout << "type:2\n";
-    // std::cout << "type:1, tree_id:" << leafNode->nodeId << ", meta:" << pktId++;
-    std::cout << "type:1, tree_id:" << leafNode->nodeId << ", meta:" << 0;
+    std::cout << "type:1, tree_id:" << leafNode->nodeId << ", meta:" << pktId++;
+    // std::cout << "type:1, tree_id:" << leafNode->nodeId << ", meta:" << 0;
     for(size_t i=0; i<priorityVec.size(); i++){
         std::cout << ", priority" << i << ":" << priorityVec[i];
     }
@@ -176,6 +180,10 @@ void tagPriority(const char* pcap_file, const char* trace_file, bool hasPFabric)
 
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t* pcap_handle;
+
+    idle_cycle_cnt = 0;
+    pktId = 0;
+    curCycle = 0;
 
     // 打开 pcap 文件
     pcap_handle = pcap_open_offline(pcap_file, errbuf);
@@ -197,6 +205,139 @@ void tagPriority(const char* pcap_file, const char* trace_file, bool hasPFabric)
         cumulatePktNum = 0;
     }
     std::cout << "type:0, idle_cycle:" << MAX_IDLECYCLE << std::endl;
+    fclose(stdout);
+
+    // 关闭 pcap 文件
+    pcap_close(pcap_handle);
+    
+    return;
+}
+
+#else
+
+void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, const unsigned char* packet) {
+    if(idle_cycle_cnt > 400){
+        return;
+    }
+
+    std::string flowId = getFlowId(user, pkthdr, packet);
+
+    if(flowNodeMap.find(flowId) == flowNodeMap.end()){
+        return;
+    }
+
+    TreeNode leafNode = flowNodeMap[flowId];
+
+    std::vector<int> priorityVec;
+    tagPriorityTillRoot(leafNode, priorityVec, user, pkthdr, packet);
+    // assert(priorityVec.size() == 2);
+
+    long long thisPacketCycle = tsToCycle(&pkthdr->ts);
+    assert(thisPacketCycle >= curCycle);
+    if(thisPacketCycle - curCycle > 1){
+        if(curCycle != 0){
+            std::cout << "type:0, idle_cycle:" << std::min(thisPacketCycle - curCycle - 1, MAX_INTERVAL_IDLECYCLE) << std::endl;
+            idle_cycle_cnt++;
+        }else{
+            std::cout << "type:0, idle_cycle:100" << std::endl;
+        }
+    }
+    curCycle = thisPacketCycle;
+    // std::cout << "type:1, priority:"<< priorityVec[1] <<", tree_id:" << leafNode->nodeId << ", data_meta:1, data_payload:" << priorityVec[0] << "\n";
+    // std::cout << "type:2\n";
+    std::cout << "type:1, tree_id:" << leafNode->nodeId << ", meta:" << pktId++;
+    for(size_t i=0; i<priorityVec.size(); i++){
+        std::cout << ", priority" << i << ":" << priorityVec[i];
+    }
+    std::cout<<std::endl;
+    std::cout << "type:2\n";
+}
+
+void tagPriority(const char* pcap_file, const char* trace_file, bool hasPFabric){
+    if(hasPFabric){
+        pFabricInitFlowRemainingSize(pcap_file);
+    }
+
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_t* pcap_handle;
+
+    idle_cycle_cnt = 0;
+    pktId = 0;
+    curCycle = 0;
+
+    // 打开 pcap 文件
+    pcap_handle = pcap_open_offline(pcap_file, errbuf);
+    if (pcap_handle == nullptr) {
+        std::cerr << "Error opening pcap file: " << errbuf << std::endl;
+        return;
+    }
+
+    freopen(trace_file, "w", stdout);
+    if (pcap_loop(pcap_handle, 0, tagPriorityHandler, nullptr) < 0) {
+        std::cerr << "Error in pcap_loop: " << pcap_geterr(pcap_handle) << std::endl;
+        pcap_close(pcap_handle);
+        return;
+    }
+    std::cout << "type:0, idle_cycle:" << MAX_IDLECYCLE << std::endl;
+    fclose(stdout);
+
+    // 关闭 pcap 文件
+    pcap_close(pcap_handle);
+    
+    return;
+}
+
+#endif
+
+void printPFMapHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, const unsigned char* packet) {
+    if(idle_cycle_cnt > 400){
+        return;
+    }
+
+    std::string flowId = getFlowId(user, pkthdr, packet);
+
+    if(flowNodeMap.find(flowId) == flowNodeMap.end()){
+        return;
+    }
+
+    assert(FidMap.find(flowId) != FidMap.end());
+
+    std::cout << "meta:" << pktId++ << ", flow:" << FidMap.find(flowId)->second << std::endl;
+
+
+    long long thisPacketCycle = tsToCycle(&pkthdr->ts);
+    assert(thisPacketCycle >= curCycle);
+
+    if(thisPacketCycle - curCycle > 1){
+        if(curCycle != 0){
+            idle_cycle_cnt++;
+        }
+    }
+
+    curCycle = thisPacketCycle;
+}
+
+void printPFMap(const char* pcap_file, const char* PFMap_file){
+
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_t* pcap_handle;
+    idle_cycle_cnt = 0;
+    pktId = 0;
+    curCycle = 0;
+
+    // 打开 pcap 文件
+    pcap_handle = pcap_open_offline(pcap_file, errbuf);
+    if (pcap_handle == nullptr) {
+        std::cerr << "Error opening pcap file: " << errbuf << std::endl;
+        return;
+    }
+
+    freopen(PFMap_file, "w", stdout);
+    if (pcap_loop(pcap_handle, 0, printPFMapHandler, nullptr) < 0) {
+        std::cerr << "Error in pcap_loop: " << pcap_geterr(pcap_handle) << std::endl;
+        pcap_close(pcap_handle);
+        return;
+    }
     fclose(stdout);
 
     // 关闭 pcap 文件

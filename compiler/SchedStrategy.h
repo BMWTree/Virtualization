@@ -31,5 +31,6 @@ SchedStrategy SchedStrategySP(StrategySP SP);
 SchedStrategy SchedStrategyWFQ(StrategyWFQ WFQ);
 
 void tagPriority(const char* pcap_file, const char* trace_file, bool hasPFabric);
+void printPFMap(const char* pcap_file, const char* PFMap_file);
 
 void printSchedStrategy(SchedStrategy strategy, ostream& os);
