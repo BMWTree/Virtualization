@@ -54,7 +54,9 @@ struct app_params app = {
     .flowlet_counter=0,
     .default_port=1,
     .cyc=0,
-    .n_fw=0,
+    .rx2flows_cyc=0,
+    .flows2nodes_cyc={0},
+    .forwarding_cyc=0,
     .k=1000,
 };
 

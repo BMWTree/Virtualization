@@ -31,7 +31,7 @@ void app_main_loop_forwarding(void)
         }
         else if (!strcmp(app.inter_node, "WFQ"))
         {
-            forward = forward_WFQ; 
+            forward = forward_WFQ;
             for (int i = 0; i < 2; ++i)
             {
                 peek_mbuf[i] = rte_malloc_socket(NULL, sizeof(struct app_mbuf_array),
@@ -55,13 +55,14 @@ void app_main_loop_forwarding(void)
 
     while (!force_quit)
     {
-        if(rte_ring_count(app.rings_tx[app.default_port])<20&&get_qlen_bytes(app.default_port)<10000)
+        if (rte_ring_count(app.rings_tx[app.default_port]) < 20 && get_qlen_bytes(app.default_port) < 10000)
             forward();
     }
 }
 
 void forward_SP(void)
 {
+    uint64_t ts_start = rte_get_tsc_cycles();
     int i;
     for (int priority = 1; priority <= 2; ++priority)
     {
@@ -78,6 +79,9 @@ void forward_SP(void)
         if (ret == -ENOENT)
             continue;
         packet_enqueue(app.default_port, worker_mbuf->array[0]);
+        uint64_t ts_end = rte_get_tsc_cycles();
+        app.cyc += (ts_end - ts_start);
+        app.forwarding_cyc += (ts_end - ts_start);
         break;
     }
 }
@@ -117,16 +121,20 @@ void forward_SP(void)
 
 void forward_WFQ(void)
 {
-    for(int i=0;i<2;++i)
+    for (int i = 0; i < 2; ++i)
     {
-        for(int j=0;j<WFQ_weight[i];++j)
+        for (int j = 0; j < WFQ_weight[i]; ++j)
         {
+            uint64_t ts_start = rte_get_tsc_cycles();
             int ret = rte_ring_sc_dequeue(
                 input_rings[i],
                 (void **)worker_mbuf->array);
-            if(ret == -ENOENT)
+            if (ret == -ENOENT)
                 break;
             packet_enqueue(app.default_port, worker_mbuf->array[0]);
+            uint64_t ts_end = rte_get_tsc_cycles();
+            app.cyc += (ts_end - ts_start);
+            app.forwarding_cyc += (ts_end - ts_start);
         }
     }
 }

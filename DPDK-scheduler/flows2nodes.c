@@ -6,7 +6,7 @@ void app_main_loop_flows2nodes(int nodeid)
     struct flows2nodes_context context;
     RTE_LOG(INFO, SWITCH, "Core %u is doing flows2nodes %d\n",
             rte_lcore_id(), nodeid);
-
+    context.nodeid = nodeid;
     if (!strcmp(app.intra_node, "SP"))
     {
         context.flows2nodes = flows2nodes_SP;
@@ -52,13 +52,14 @@ void app_main_loop_flows2nodes(int nodeid)
 
     while (!force_quit)
     {
-        if(rte_ring_count(app.rings_nodes[nodeid])<20)
+        if (rte_ring_count(app.rings_nodes[nodeid]) < 20)
             context.flows2nodes(&context);
     }
 }
 
 void flows2nodes_SP(struct flows2nodes_context *context)
 {
+    uint64_t ts_start = rte_get_tsc_cycles();
     int i;
     for (int priority = 1; priority <= 3; ++priority)
     {
@@ -76,6 +77,9 @@ void flows2nodes_SP(struct flows2nodes_context *context)
             continue;
         rte_ring_sp_enqueue(context->output_ring, context->worker_mbuf->array[0]);
         RTE_LOG(DEBUG, SWITCH, "%s: enqueue packet to %s\n", __func__, context->output_ring->name);
+        uint64_t ts_end = rte_get_tsc_cycles();
+        app.cyc += (ts_end - ts_start);
+        app.flows2nodes_cyc[context->nodeid] += (ts_end - ts_start);
         break;
     }
 }
@@ -119,22 +123,28 @@ void flows2nodes_SP(struct flows2nodes_context *context)
 
 void flows2nodes_WFQ(struct flows2nodes_context *context)
 {
-    for(int i=0;i<3;++i)
+    
+    for (int i = 0; i < 3; ++i)
     {
-        for(int j=0;j<context->WFQ_weight[i];++j)
+        for (int j = 0; j < context->WFQ_weight[i]; ++j)
         {
+            uint64_t ts_start = rte_get_tsc_cycles();
             int ret = rte_ring_sc_dequeue(
-            context->input_rings[i],
-            (void **)&context->worker_mbuf->array);
-            if(ret == -ENOENT)
+                context->input_rings[i],
+                (void **)&context->worker_mbuf->array);
+            if (ret == -ENOENT)
                 break;
             rte_ring_sp_enqueue(context->output_ring, context->worker_mbuf->array[0]);
+            uint64_t ts_end = rte_get_tsc_cycles();
+            app.cyc += (ts_end - ts_start);
+            app.flows2nodes_cyc[context->nodeid] += (ts_end - ts_start);
         }
     }
 }
 
 void flows2nodes_pFabric(struct flows2nodes_context *context)
 {
+    uint64_t ts_start = rte_get_tsc_cycles();
     int ring = 0;
     int min_size = INT_MAX;
     for (int i = 0; i < 3; ++i)
@@ -157,5 +167,9 @@ void flows2nodes_pFabric(struct flows2nodes_context *context)
         }
         context->pFabric_size[ring] -= context->worker_mbuf->array[0]->pkt_len;
         rte_ring_sp_enqueue(context->output_ring, context->worker_mbuf->array[0]);
+        uint64_t ts_end = rte_get_tsc_cycles();
+        app.cyc += (ts_end - ts_start);
+        app.flows2nodes_cyc[context->nodeid] += (ts_end - ts_start);
+        break;
     }
 }

@@ -261,11 +261,7 @@ struct app_params
     double orate[APP_MAX_PORTS];
     uint64_t flowlet_counter;
     int default_port;
-    uint64_t cyc;
-    uint64_t tot_cyc;
-    uint64_t n_fw;
-    uint64_t n_loops;
-    uint64_t n_on_fw;
+
     int k;
     int ratio_on;
     int ratio_off;
@@ -276,6 +272,12 @@ struct app_params
     int SP_priority[8];
     int WFQ_weight[8];
     int pFabric_size[6];
+
+    uint64_t scheduled_packets;
+    _Atomic uint64_t cyc;
+    _Atomic uint64_t rx2flows_cyc;
+    _Atomic uint64_t flows2nodes_cyc[2];
+    _Atomic uint64_t forwarding_cyc;
 } __rte_cache_aligned;
 
 struct ipv4_5tuple_host
@@ -329,7 +331,7 @@ struct flows2nodes_context
     struct rte_ring *output_ring;
     void (*flows2nodes)(struct flows2nodes_context *);
     struct app_mbuf_array *worker_mbuf;
-
+    int nodeid;
     // SP
     int SP_priority[3];
     // WFQ

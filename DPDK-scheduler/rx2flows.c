@@ -2,12 +2,12 @@
 
 void app_main_loop_rx2flows(void)
 {
+    app.scheduled_packets = 0;
     struct app_mbuf_array *worker_mbuf;
     uint32_t i;
     int dst_port;
     struct ipv4_5tuple_host *ipv4_5tuple;
-    struct flow_key key;
-    struct app_fwd_table_item value;
+
     srand((unsigned)time(NULL));
     RTE_LOG(INFO, SWITCH, "Core %u is doing rx2flows\n",
             rte_lcore_id());
@@ -33,6 +33,7 @@ void app_main_loop_rx2flows(void)
 
     for (i = 0; !force_quit; i = (i + 1) % app.n_ports)
     {
+        uint64_t ts_start = rte_get_tsc_cycles();
         int ret;
         ret = rte_ring_sc_dequeue(
             app.rings_rx[i],
@@ -60,10 +61,14 @@ void app_main_loop_rx2flows(void)
                 RTE_LOG(DEBUG, SWITCH, "New packet %s:%d -> %s:%d\n", inet_ntoa(src_ip_addr), src_port, inet_ntoa(dst_ip_addr), dst_port);
 
                 rte_ring_sp_enqueue(app.rings_flows[flow], worker_mbuf->array[0]);
+                app.scheduled_packets++;
                 RTE_LOG(
                     DEBUG, SWITCH,
                     "%s: Port %d: forward packet to %s\n",
                     __func__, i, app.rings_flows[flow]->name);
+                uint64_t ts_end = rte_get_tsc_cycles();
+                app.cyc += (ts_end - ts_start);
+                app.rx2flows_cyc += (ts_end - ts_start);
                 break;
             }
         }
