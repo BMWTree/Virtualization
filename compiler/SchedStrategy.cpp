@@ -10,7 +10,7 @@
 #include "SP.h"
 #include "WFQ.h"
 
-#define CUM_POP 1
+#define CUM_POP 0
 
 extern std::map<std::string, TreeNode> flowNodeMap;
 std::map<std::string, int> FidMap;

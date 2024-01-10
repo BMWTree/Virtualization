@@ -1,6 +1,9 @@
 // version 7: input the trace with priority and output the priority sequence
 
 #include <bits/stdc++.h>
+#include <queue>
+#include <unordered_map>
+#include <vector>
 #include "util.h"
 
 using namespace std;
@@ -61,6 +64,16 @@ struct Tree {
         son[0] = son[1] = 0;
     }
 } node[M<<L];
+
+struct A_Push {
+    int treeid, meta, p0, p1;
+    A_Push (int _treeid, int _meta, int _p0, int _p1) {
+        treeid = _treeid;
+        meta = _meta;
+        p0 = _p0;
+        p1 = _p1;
+    }
+};
 
 // Record the root node of BMW trees
 int tree[M], tot;
@@ -174,18 +187,72 @@ int get_number(string s, int skip_num) {
     return ret;
 }
 
-// void write_push_line(int meta) {
-//     printf("meta:%d, push_cyc:%lld\n", meta, push_cnt++);
+void write_push_line(int meta) {
+    printf("meta:%d, push_cyc:%lld\n", meta, push_cnt++);
+}
+void write_pop_line(int meta) {
+    printf("meta:%d, pop_cyc:%lld\n", meta, pop_cnt++);
+}
+
+// void write_pop_line1(int meta) {
+//     printf("meta:%d, push_cyc:%lld\n", meta, pop_cnt++);
 // }
-// void write_pop_line(int meta) {
-//     printf("meta:%d, pop_cyc:%lld\n", meta, pop_cnt++);
+// void write_pop_line2(int meta, int priority) {
+//     printf("meta:%d, pop_cyc:%d\n", meta, priority);
 // }
 
-void write_pop_line1(int meta) {
-    printf("meta:%d, push_cyc:%lld\n", meta, pop_cnt++);
-}
-void write_pop_line2(int meta, int priority) {
-    printf("meta:%d, pop_cyc:%d\n", meta, priority);
+const int FLOW_NUM = 6;
+vector<queue<A_Push>> perFlowPushQueue(FLOW_NUM);
+vector<int> perFlowPopQueue(FLOW_NUM);
+vector<int> perFlowState(FLOW_NUM);
+vector<int> perFlowpreState(FLOW_NUM);
+
+unordered_map<int, int> PFMap;
+
+void readPFMap(const std::string& pfmapFilePath, std::unordered_map<int, int>& pfmap) {
+    // 打开文件
+    std::ifstream file(pfmapFilePath);
+
+    // 检查文件是否成功打开
+    if (!file.is_open()) {
+        std::cerr << "Error opening file: " << pfmapFilePath << std::endl;
+        return;
+    }
+
+    // 定义一个字符串变量，用于存储每一行的内容
+    std::string line;
+
+    // 逐行读取文件内容
+    while (std::getline(file, line)) {
+        // 使用istringstream来处理每一行的内容
+        std::istringstream iss(line);
+
+        // 使用', '作为分隔符将每一行分割成多个部分
+        std::string part;
+        int meta = 0;
+        int flowId = 0;
+
+        std::getline(iss, part, ',');
+        // 查找':'的位置，以便将键和值分开
+        size_t pos = part.find(':');
+        if (pos != std::string::npos) {
+            std::string valueStr = part.substr(pos + 1);
+            meta = std::stoi(valueStr);
+        }
+
+        std::getline(iss, part, ',');
+        // 查找':'的位置，以便将键和值分开
+        pos = part.find(':');
+        if (pos != std::string::npos) {
+            std::string valueStr = part.substr(pos + 1);
+            flowId= std::stoi(valueStr);
+        }
+
+        pfmap[meta] = flowId;
+    }
+
+    // 关闭文件
+    file.close();
 }
 
 // To csl: input is here!
@@ -194,9 +261,10 @@ int read_line() {
         type = get_number(type_s, 0);
         // Add a pop task at root
         if (type == 2) {
-            push_task(0, (Task){Pop, 0});
-            task_num[0]--;
-            // printf("log: read pop\n");
+            // push pkt into per-flow queue
+            assert(PFMap.find(meta) != PFMap.end());
+            // std::cout << "pop out flow: " << PFMap[meta] << std::endl;
+            perFlowPopQueue[PFMap[meta]]++;
         }
         // Add a push task
         if (type == 1) {
@@ -205,12 +273,18 @@ int read_line() {
             meta = get_number(meta_s, 0);
             p0 = get_number(p0_s, 1);
             p1 = get_number(p1_s, 1);
-            push_task(treeid % N, (Task){Push, treeid, p0, meta});
+
+            // push pkt into per-flow queue
+            assert(PFMap.find(meta) != PFMap.end());
+            // std::cout << "push into flow: " << PFMap[meta] << std::endl;
+            perFlowPushQueue[PFMap[meta]].push(A_Push(treeid, meta, p0, p1));
+
+            // push_task(treeid % N, (Task){Push, treeid, p0, meta});
             // write_push_line(meta);
-            push_task(0, (Task){Push, 0, p1, treeid});
-            task_num[0]++, task_num[treeid]++;
-            /* printf("log: read push treeid %d, meta %d, p0 %d, p1 %d\n",
-                    treeid, meta, p0, p1); */
+            // push_task(0, (Task){Push, 0, p1, treeid});
+            // task_num[0]++, task_num[treeid]++;
+            // /* printf("log: read push treeid %d, meta %d, p0 %d, p1 %d\n",
+            //         treeid, meta, p0, p1); */
         }
         if (type == 0) {
             cin >> idle_s;
@@ -221,6 +295,53 @@ int read_line() {
     // The file is EOF
     else
         return 0;
+}
+
+int last_flow_push = 0;
+int last_flow_pop = 0;
+void try_push_push_task(){
+    // try push task into task list
+    for(int i=0; i<FLOW_NUM; i++){
+        int cur = (last_flow_push + i) % FLOW_NUM;
+        // std::cout << "flow State: " << perFlowState[cur] << std::endl;
+        // std::cout << "flow Queue Empty: " << perFlowPushQueue[cur].empty() << std::endl;
+        if(perFlowState[cur]==0 && !perFlowPushQueue[cur].empty()){
+            A_Push a_push = perFlowPushQueue[cur].front();
+            perFlowPushQueue[cur].pop();
+            perFlowState[cur] = 1;
+            perFlowpreState[cur] = 1;
+            // std::cout << "a push task: " << cur << std::endl;
+            push_task(a_push.treeid % N, (Task){Push, a_push.treeid, a_push.p0, a_push.meta});
+            write_push_line(a_push.meta);
+            push_task(0, (Task){Push, 0, a_push.p1, a_push.treeid});
+            task_num[0]++, task_num[a_push.treeid]++;
+            last_flow_push = (cur+1) % FLOW_NUM;
+            break;
+        }
+        if(i==FLOW_NUM-1){
+            last_flow_push = (cur+1) % FLOW_NUM;
+        }
+    }
+}
+
+void try_push_pop_task(){
+    for(int i=0; i<FLOW_NUM; i++){
+        int cur = (last_flow_pop + i) % FLOW_NUM;
+        if(perFlowpreState[cur] == 1 && perFlowPopQueue[cur] > 0){
+            perFlowPopQueue[cur]--;
+            perFlowpreState[cur] = 0;
+            // std::cout << "a pop task: " << cur << std::endl;
+            push_task(0, (Task){Pop, 0});
+            task_num[0]--;
+            // printf("log: read pop\n");
+            last_flow_pop = (cur+1) % FLOW_NUM;
+            break;
+        }
+        if(i==FLOW_NUM-1){
+            last_flow_pop = (cur+1) % FLOW_NUM;
+        }
+    }
+    
 }
 
 // To csl: output is here!
@@ -234,9 +355,21 @@ int read_line() {
 
 int main(int argc, char * argv[]) {
 
+    // for(int i=0; i<FLOW_NUM; ++i){
+    //     perFlowState[i] = 0;
+    //     perFlowPushQueue[i] = queue<A_Push>();
+    //     while(!perFlowPushQueue[i].empty()){
+    //         perFlowPushQueue[i].pop();
+    //     }
+    // }
+
+
     string inputFileName = argv[1];
     string outputFileName = getRefFileName(inputFileName);
+    string PFMapFileName = getPFMapFileName(inputFileName);
     inputFileName = getTraceFileName(inputFileName);
+
+    readPFMap(PFMapFileName, PFMap);
 
     freopen(inputFileName.c_str(), "r", stdin);
     freopen(outputFileName.c_str(), "w", stdout);
@@ -257,7 +390,8 @@ int main(int argc, char * argv[]) {
         // shortcut: skipping_flag != 0  -> no read, just run a cycle
         if (!skipping_flag && !read_line())
             break;
-
+        try_push_push_task();
+        try_push_pop_task();
         cycle++;
         // Processed cycle has excceeded the flag, no need to skip
         if (cycle > skipping_flag)
@@ -273,6 +407,7 @@ int main(int argc, char * argv[]) {
                 if (RPU[i].type == Pop) {
                     pa = pop(tree[RPU[i].root]);
                     // After a root pop, now we know which tree to pop
+                    // printf("pop tree  %d, pri %d, meta %d\n", tree[RPU[i].root], pa.first, pa.second);
                     if (RPU[i].root == 0) {
                         t = (Task){Pop, pa.second};
                         // printf("log: add pop task %d\n", pa.second);
@@ -286,8 +421,8 @@ int main(int argc, char * argv[]) {
                         // printf("Tree %d, ", i);
                         // write_line(pa.first);
                         // printf("%d\n", pa.first);
-                        write_pop_line1(pa.second);
-                        write_pop_line2(pa.second, pa.first);
+                        perFlowState[PFMap[pa.second]] = 0;
+                        write_pop_line(pa.second);
                     }
                 }
                 else if (RPU[i].root != 0) {

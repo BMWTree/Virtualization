@@ -6,9 +6,9 @@ parser.add_argument('input_file_path', type=str, help='Path to the input file')
 
 args = parser.parse_args()
 
-xlabel = 'Pop cnt'
+xlabel = 'Push order'
 
-ylabel = 'Priority'
+ylabel = 'Pop order'
 
 def get_pfmap_file_name(input_file_name):
     # 查找 ".output" 的位置
@@ -135,6 +135,7 @@ def draw_fig(output_file_path, fig_file_path):
     # 添加图例
     plt.legend()
 
+    plt.tight_layout()
     # 保存图表为图片文件（例如PNG）
     plt.savefig(fig_file_path, dpi=1200)
 
@@ -159,6 +160,7 @@ def draw_fig(output_file_path, fig_file_path):
     # 添加图例
     plt.legend()
 
+    plt.tight_layout()
     # 保存图表为图片文件（例如PNG）
     plt.savefig(fig_file_path+'.start.png', dpi=500)
 
