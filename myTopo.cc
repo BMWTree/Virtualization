@@ -1,0 +1,561 @@
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation;
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ * ==== Full network simulation experiment for vPIFO
+ * ==== 4 spine 9 leaf 144 server  leaf-spine topo
+ *
+ */
+
+# include <cstdio>
+# include <fstream>
+# include <iostream>
+# include <map>
+# include <unordered_map>
+
+# include "ns3/applications-module.h"
+# include "ns3/core-module.h"
+# include "ns3/flow-monitor-module.h"
+# include "ns3/internet-module.h"
+# include "ns3/ipv4-header.h"
+# include "ns3/netanim-module.h"
+# include "ns3/network-module.h"
+# include "ns3/point-to-point-module.h"
+# include "ns3/random-variable-stream.h"
+# include "ns3/stats-module.h"
+# include "ns3/traffic-control-module.h"
+# include "ns3/udp-header.h"
+# include "ns3/packet.h"
+# include "ns3/tag.h"
+# include "ns3/Tenant-tag.h"
+
+using namespace ns3;
+using namespace std;
+
+NS_LOG_COMPONENT_DEFINE("MyTopoTCP");
+
+const int LEAF_CNT = 9;                                 // number of leaf nodes
+const int SPINE_CNT = 4;                                // number of spine nodes
+const int SERVER_CNT = 144;                             // number of server nodes
+const int LINK_CNT = LEAF_CNT * SPINE_CNT + SERVER_CNT; // number of links
+uint32_t totalPktSize = 0;                              // count the total pkt # of all flows
+uint32_t total_send = 0;
+const char *ACCESS_RATE = "10Gbps";   // Access Link Bandwith 10G
+const char *BACKBONE_RATE = "40Gbps"; // Leaf-spine Link Bandwith 10G
+const char *DATARATE = "10Gbps";  // Bandwith 10G
+const char *DELAY =
+    "3us";                       // Delay 3us (0.000001s -> 0.0001s)  (3ms = 0.001s -> 0.1s)
+double nSamplingPeriod = 0.001;  // 0.000006115; // 0.0001
+double simulator_stop_time = 10; // 0.0301; //0.0086404
+const int PKTSIZE = 1448;        // pkt size payload
+
+uint32_t previous[SERVER_CNT << 16] = {0};
+uint32_t previoustx[SERVER_CNT << 16] = {0};
+Time prevTime[SERVER_CNT << 16] = {Seconds(0)};
+double preDelaySum[SERVER_CNT << 16] = {
+    0.0};                                  // record the delaysum for each flow
+set<int> fFlowIds;                         // record forwading flow ids
+uint32_t flowSize[SERVER_CNT << 16] = {0}; // record the flow size
+uint32_t flowPktsTx[SERVER_CNT << 16] = {
+    0}; // record the number of pkts receivtransmitted for each flow
+uint32_t flowPktsRx[SERVER_CNT << 16] = {
+    0}; // record the number of pkts received for each flow
+double startTxTime[SERVER_CNT << 16] = {
+    0.0}; // record the start trans timestamp for each flow
+double lastRxTime[SERVER_CNT << 16] = {
+    0.0};         // record the last timestamp when Rx thr is non-zero for each flow
+int flow_cnt = 0; // flow id: 0, 1, 2, ...
+std::unordered_map<uint64_t, int> flow_index;
+
+// ip address pairs on the same links
+std::vector<Ipv4InterfaceContainer> interfaces(LINK_CNT);
+// Create nodes: leaf + spine + server = nodes
+NodeContainer leafNodes, spineNodes, serverNodes, nodes;
+// Help to monitor cwnd
+AsciiTraceHelper asciiTraceHelper;
+
+class MyApp : public Application
+{
+public:
+  MyApp();
+  virtual ~MyApp();
+  /**
+   * Register this type.
+   * \return The TypeId.
+   */
+  static TypeId GetTypeId(void);
+  void Setup(Ptr<Socket> socket, Address address, uint32_t packetSize,
+             uint32_t nPackets, DataRate dataRate, uint32_t flowId);
+
+private:
+  virtual void StartApplication(void);
+  virtual void StopApplication(void);
+  void ScheduleTx(void);
+  void SendPacket(void);
+  Ptr<Socket> m_socket;
+  Address m_peer;
+  uint32_t m_packetSize;
+  uint32_t m_nPackets;
+  DataRate m_dataRate;
+  EventId m_sendEvent;
+  bool m_running;
+  uint32_t m_packetsSent;
+  uint32_t m_flowId;
+};
+
+MyApp::MyApp()
+    : m_socket(0),
+      m_peer(),
+      m_packetSize(0),
+      m_nPackets(0),
+      m_dataRate(0),
+      m_sendEvent(),
+      m_running(false),
+      m_packetsSent(0) {}
+
+MyApp::~MyApp() { m_socket = 0; }
+
+/* static */
+TypeId MyApp::GetTypeId(void)
+{
+  static TypeId tid = TypeId("MyApp")
+                          .SetParent<Application>()
+                          .SetGroupName("Tutorial")
+                          .AddConstructor<MyApp>();
+  return tid;
+}
+
+void
+
+MyApp::Setup(Ptr<Socket> socket, Address address,
+             uint32_t packetSize, uint32_t nPackets, DataRate dataRate, uint32_t flowId)
+{
+  m_socket = socket;
+  m_peer = address;
+  m_packetSize = packetSize;
+  m_nPackets = nPackets;
+  m_dataRate = dataRate;
+  m_flowId = flowId;
+}
+
+void MyApp::StartApplication(void)
+{
+  m_running = true;
+  m_packetsSent = 0;
+  m_socket->Bind();
+  m_socket->Connect(m_peer);
+  SendPacket();
+}
+
+void MyApp::StopApplication(void)
+{
+  m_running = false;
+  if (m_sendEvent.IsRunning())
+  {
+    Simulator::Cancel(m_sendEvent);
+  }
+  if (m_socket)
+  {
+    m_socket->Close();
+  }
+}
+
+void MyApp::SendPacket(void)
+{
+  Ptr<Packet> packet = Create<Packet>(m_packetSize);
+  m_socket->Send(packet);
+  total_send += 1;
+  if (++m_packetsSent < m_nPackets)
+  {
+    ScheduleTx();
+  }
+}
+
+void MyApp::ScheduleTx(void)
+{
+  if (m_running)
+  {
+    Time tNext(Seconds(m_packetSize * 8 /
+                       static_cast<double>(m_dataRate.GetBitRate())));
+    m_sendEvent = Simulator::Schedule(tNext, &MyApp::SendPacket, this);
+  }
+}
+
+class TraceFlow
+{
+private:
+  ifstream flow;
+  uint32_t flow_num;
+  struct FlowInput
+  {
+    uint32_t src, dst, maxPacketCount, sport, dport;
+    double start_time;
+    uint32_t idx;
+    uint32_t tenant;
+  };
+
+  FlowInput flow_input = {0};
+
+  bool CheckTenant(uint32_t tenant)
+  {
+    int group = tenant / 10;
+    int index = tenant % 10;
+    if (flow_type == WebSearch)
+      return index <= group;
+    else
+      return index > group;
+  }
+
+public:
+  enum type
+  {
+    WebSearch,
+    Hadoop
+  } flow_type;
+  
+  TraceFlow(string file_name, type flow_t)
+  {
+    flow.open(file_name);
+    flow >> flow_num;
+    cout << "flow_num:" << flow_num << endl;
+    flow_input.idx = 0;
+    flow_type = flow_t;
+  }
+
+  void ReadFlowInput()
+  {
+    if (flow_input.idx < flow_num)
+    {
+      flow >> flow_input.src >> flow_input.dst >> flow_input.sport >>
+          flow_input.dport >> flow_input.maxPacketCount >>
+          flow_input.start_time >> flow_input.tenant;
+      while (!CheckTenant(flow_input.tenant))
+      {
+        flow_input.idx++;
+        if (flow_input.idx < flow_num)
+          flow >> flow_input.src >> flow_input.dst >> flow_input.dport >>
+              flow_input.maxPacketCount >>
+              flow_input.start_time >> flow_input.tenant;
+      }
+      totalPktSize += flow_input.maxPacketCount;
+      cout << "flow_input.start_time:" << flow_input.start_time << endl;
+      cout << "flow_input.src:" << flow_input.src
+           << " flow_input.dst:" << flow_input.dst;
+    }
+  }
+
+  void ScheduleFlowInputs()
+  {
+    while (flow_input.idx < flow_num &&
+           Seconds(flow_input.start_time) == Simulator::Now())
+    {
+
+      // Server
+      uint16_t sinkPort = flow_input.dport;
+      Address sinkAddress(InetSocketAddress(
+          interfaces[flow_input.dst].GetAddress(1), sinkPort));
+      PacketSinkHelper sinkHelper("ns3::TcpSocketFactory",
+                            InetSocketAddress(Ipv4Address::GetAny(), sinkPort));
+      ApplicationContainer sinkApp =
+          sinkHelper.Install(serverNodes.Get(flow_input.dport));
+      sinkApp.Start(Seconds(0));
+      sinkApp.Stop(Seconds(simulator_stop_time));
+
+      // Client
+      TypeId tid = TypeId::LookupByName("ns3::TcpNewReno");
+      Config::Set("/NodeList/*/$ns3::TcpL4Protocol/SocketType",
+                  TypeIdValue(tid));
+      Ptr<Socket> ns3TcpSocket = Socket::CreateSocket(
+          serverNodes.Get(flow_input.src), TcpSocketFactory::GetTypeId());
+      ns3TcpSocket->SetAttribute(
+          "SndBufSize", ns3::UintegerValue(1438000000));
+      InetSocketAddress srcAddr =
+          InetSocketAddress(Ipv4Address::GetAny(), flow_input.sport);
+      ns3TcpSocket->Bind(srcAddr);
+      Ptr<MyApp> app = CreateObject<MyApp>();
+      app->Setup(
+          ns3TcpSocket, sinkAddress, PKTSIZE, flow_input.maxPacketCount,
+          DataRate(DATARATE),
+          flow_input.idx);
+      Ptr<TenantTag> tag = Create<TenantTag>();
+      tag->SetTenantId(flow_input.tenant);
+      serverNodes.Get(flow_input.src)->AddApplication(app);
+      app->SetStartTime(Seconds(0.0));
+
+      // record flow size for each flow
+      int index = ++flow_cnt;
+      uint64_t flow_hash = 
+          (static_cast<uint64_t>(flow_input.src) << 16) | flow_input.sport;
+      flow_index[flow_hash] = index;
+      flowSize[index] = flow_input.maxPacketCount;
+      flow_input.idx++;
+      ReadFlowInput();
+    }
+    // schedule the next time to run this function
+    if (flow_input.idx < flow_num)
+    {
+      Simulator::Schedule(Seconds(flow_input.start_time) - Simulator::Now(),
+                          &TraceFlow::ScheduleFlowInputs, this);
+    }
+    else
+    { // no more flows, close the file
+      flow.close();
+    }
+  }
+
+  void Start()
+  {
+    if (flow_num > 0)
+    {
+      ReadFlowInput();
+      cout << "Seconds(flow_input.start_time)-Simulator::Now():"
+           << Seconds(flow_input.start_time) - Simulator::Now() << endl;
+      Simulator::Schedule(Seconds(flow_input.start_time) - Simulator::Now(),
+                          &TraceFlow::ScheduleFlowInputs, this);
+    }
+  }
+} web_search("scratch/traffic_ws.txt", TraceFlow::WebSearch), 
+  hadoop("scratch/traffic_hd.txt", TraceFlow::Hadoop);
+
+static void
+ThroughputMonitor(FlowMonitorHelper *fmhelper, Ptr<FlowMonitor> monitor)
+{
+  double localThrou = 0.0;
+  double localThroutx = 0.0;
+  double totalLocalThrou = 0.0;
+  double totalLocalThroutx = 0.0;
+  // int totalLostPkts = 0;
+  int totalRxPkts = 0;
+  int totalTxPkts = 0;
+  Time delaySum = Seconds(0);
+  // double localThroutx = 0.0;
+  monitor->CheckForLostPackets();
+  std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats();
+  Ptr<Ipv4FlowClassifier> classifier =
+      DynamicCast<Ipv4FlowClassifier>(fmhelper->GetClassifier());
+  Time curTime = Now();
+  for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i =
+           stats.begin();
+       i != stats.end(); ++i)
+  {
+    Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(i->first);
+    // record to corresponding flow
+    uint64_t flow_hash = 
+          (static_cast<uint64_t>(t.sourceAddress.Get()) << 16) | t.sourcePort;
+    int index = flow_index[flow_hash];
+    localThrou =
+        8 * (i->second.rxBytes - previous[index]) /
+        (1024 * 1024 * (curTime.GetSeconds() - prevTime[index].GetSeconds()));
+    localThroutx =
+        8 * (i->second.txBytes - previoustx[index]) /
+        (1024 * 1024 * (curTime.GetSeconds() - prevTime[index].GetSeconds()));
+    prevTime[index] = curTime;
+    previous[index] = i->second.rxBytes;
+    previoustx[index] = i->second.txBytes;
+    totalLocalThrou += localThrou;
+    totalLocalThroutx += localThroutx;
+    totalRxPkts += i->second.rxPackets;
+    totalTxPkts += i->second.txPackets;
+    delaySum += i->second.delaySum;
+    // record the number of pkts transmitted by flow
+    flowPktsTx[index] = i->second.txPackets;
+    // record the number of pkts received by flow
+    flowPktsRx[index] = i->second.rxPackets;
+    // record the last timestamp when Rx thr is non-zero for each flow
+    if (localThrou != 0)
+    {
+      lastRxTime[index] = i->second.timeLastRxPacket.GetSeconds();
+      startTxTime[index] = i->second.timeFirstTxPacket.GetSeconds();
+      std::ofstream thr3("GBResult/firstTime.dat",
+                         std::ios::out | std::ios::app);
+      thr3 << index << ": " << i->second.timeFirstTxPacket.GetSeconds()
+           << ", " << i->second.timeFirstRxPacket.GetSeconds() << ", "
+           << i->second.timeLastRxPacket.GetSeconds() << std::endl;
+    }
+  }
+
+  // write total throughput value into the file
+  stringstream path1;
+  path1 << "GBResult/performance.dat"; // plotResult
+  stringstream path2;
+  path2 << "GBResult/performance_detail.dat"; // plotResult
+  std::ofstream thr1(path1.str(), std::ios::out | std::ios::app);
+  std::ofstream thr2(path2.str(), std::ios::out | std::ios::app);
+  if (totalRxPkts != 0)
+  {
+    thr2 << curTime.GetSeconds() << "s  throuput:" << totalLocalThrou
+         << " tx:" << totalLocalThroutx << "  totalTxPkts:" << totalTxPkts
+         << "  totalRxPkts:" << totalRxPkts
+         << "  totalLostPkts:" << totalTxPkts - totalRxPkts
+         << "  avg_delay:" << delaySum.GetSeconds() / totalRxPkts << std::endl;
+    thr1 << curTime.GetSeconds() << " " << totalLocalThrou << std::endl;
+  }
+  else
+  {
+    thr2 << curTime.GetSeconds() << "s  throuput:" << totalLocalThrou
+         << " tx:" << totalLocalThroutx << "  totalRxPkts:" << totalRxPkts
+         << "  totalLostPkts:" << totalTxPkts - totalRxPkts << std::endl;
+    thr1 << curTime.GetSeconds() << " " << totalLocalThrou << std::endl;
+  }
+  Simulator::Schedule(Seconds(nSamplingPeriod), &ThroughputMonitor, fmhelper,
+                      monitor);
+}
+
+int main(int argc, char *argv[])
+{
+  // LogComponentEnable ("TcpSocketBase", LOG_LEVEL_INFO);
+  // LogComponentEnable ("TcpCongestionOps", LOG_LEVEL_INFO);
+  // LogComponentEnable ("PointToPointNetDevice", LOG_LEVEL_INFO);
+
+  // time out settings
+  Config::SetDefault("ns3::TcpSocket::DelAckTimeout", TimeValue(Seconds(0.0)));
+  // duplicate ack time out = 3RTT = 36us  //100us
+  Config::SetDefault("ns3::RttEstimator::InitialEstimation",
+                     TimeValue(Seconds(0.000012))); // 12us
+  Config::SetDefault("ns3::TcpSocket::ConnTimeout",
+                     TimeValue(Seconds(0.000060))); // syn timeout 3rtt
+  Config::SetDefault("ns3::TcpSocketBase::MinRto",
+                     TimeValue(Seconds(0.000060))); // 3RTT=36us
+  Config::SetDefault("ns3::TcpSocketBase::ClockGranularity",
+                     TimeValue(MilliSeconds(0.012))); // RTO=3RTT=36us
+  // Config::SetDefault ("ns3::TcpSocketBase::ConnCount", TimeValue(MilliSeconds
+  // (0.012)));//ConnCount
+
+  // MSS
+  Config::SetDefault("ns3::TcpSocket::DataRetries", UintegerValue(100));
+  Config::SetDefault("ns3::TcpSocket::ConnCount", UintegerValue(100));
+  Config::SetDefault("ns3::TcpSocket::SegmentSize", UintegerValue(1448));
+  // SegmentSize
+
+  clock_t begint, endt;
+  begint = clock();
+  CommandLine cmd;
+  cmd.Parse(argc, argv);
+  Time::SetResolution(Time::NS);
+
+  // Create nodes
+  leafNodes.Create(LEAF_CNT);     // 0, 1, 2 ... 8
+  spineNodes.Create(SPINE_CNT);   // 9, 10, 11, 12
+  serverNodes.Create(SERVER_CNT); // 13, 14, 15 ... 156
+  nodes = NodeContainer(leafNodes, spineNodes, serverNodes);
+
+  // Configure channels
+  PointToPointHelper backboneHelper;
+  backboneHelper.SetDeviceAttribute("DataRate", StringValue(BACKBONE_RATE));
+  backboneHelper.SetChannelAttribute("Delay", StringValue(DELAY));
+  backboneHelper.SetQueue("ns3::DropTailQueue",
+                              "MaxPackets", UintegerValue(100));
+  PointToPointHelper accessHelper;
+  accessHelper.SetDeviceAttribute("DataRate", StringValue(ACCESS_RATE));
+  accessHelper.SetChannelAttribute("Delay", StringValue(DELAY));
+  accessHelper.SetQueue("ns3::DropTailQueue",
+                            "MaxPackets", UintegerValue(100));
+
+  // Install configurations to devices (NIC)
+  std::vector<NetDeviceContainer> devices(LINK_CNT);
+  int device_cnt = 0;
+  for (int i = 0, j; i < SERVER_CNT; ++i)
+  {
+    j = i / (SERVER_CNT / LEAF_CNT);
+    devices[device_cnt] = 
+        accessHelper.Install(leafNodes.Get(j), serverNodes.Get(i));
+    device_cnt++;
+  }
+  for (int i = 0; i < LEAF_CNT; ++i)
+    for (int j = 0; j < SPINE_CNT; ++j)
+    {
+      devices[device_cnt] = 
+          backboneHelper.Install(leafNodes.Get(i), spineNodes.Get(j));
+      device_cnt++;
+    }
+
+  // Install network protocals
+  InternetStackHelper stack;
+  stack.Install(nodes); // install tcp, udp, ip...
+
+  // Assign ip address
+  Ipv4AddressHelper address;
+  for (uint32_t i = 0; i < LINK_CNT; i++)
+  {
+    std::ostringstream subset;
+    subset << "10.1." << i + 1 << ".0";
+    // n0: 10.1.1.1    n1 NIC1: 10.1.1.2   n1 NIC2: 10.1.2.1   n2 NIC1: 10.1.2.2
+    address.SetBase(subset.str().c_str(), "255.255.255.0"); // sebnet & mask
+    interfaces[i] = address.Assign(
+        devices[i]); // set ip addresses to NICs: 10.1.1.1, 10.1.1.2 ...
+  }
+  
+  printf("my log: finish configure! point 1\n");
+
+  // unintall traffic control
+  TrafficControlHelper tch;
+  for (int i = 0; i < LINK_CNT; i++)
+  {
+    tch.Uninstall(devices[i]);
+  }
+  tch.SetRootQueueDisc("ns3::vPIFO");
+  for (int i = 0; i < LINK_CNT; ++i)
+  {
+    tch.Install(devices[i]);
+    printf("%d\n", i);
+  }
+
+  // Initialize routing database and set up the routing tables in the nodes.
+  Ipv4GlobalRoutingHelper::PopulateRoutingTables();
+  
+  printf("my log: finish setting!");
+
+  // Start the trace input and send packet
+  web_search.Start();
+  hadoop.Start();
+
+  // ========= my work now done here =========
+  // monitor throughput
+  FlowMonitorHelper flowmon;
+  Ptr<FlowMonitor> monitor = flowmon.Install(nodes);
+  ThroughputMonitor(&flowmon, monitor);
+
+  std::cout << "Running Simulation.\n";
+  fflush(stdout);
+  NS_LOG_INFO("Run Simulation.");
+  Simulator::Stop(Seconds(simulator_stop_time));
+  Simulator::Run();
+  Simulator::Destroy();
+  NS_LOG_INFO("Done.");
+  
+
+  // calculate FCT and avg throughput
+  for (size_t i = 0; i < flow_index.size(); i++)
+  {
+    double fct = lastRxTime[i] - startTxTime[i];
+    std::ofstream ss_fct("vPIFOResult/fct.txt",
+                         std::ios::out | std::ios::app);
+    ss_fct << i + 1 << "   " << fct << std::endl;
+    std::ofstream ss_fs("vPIFOResult/flowSize.txt",
+                        std::ios::out | std::ios::app);
+    ss_fs << i + 1 << " " << flowSize[i] << std::endl;
+    std::ofstream ss_thr("vPIFOResult/flowAvgThr", std::ios::out | std::ios::app);
+    ss_thr << i + 1 << "   "
+           << (8 * PKTSIZE * flowSize[i]) / (1024 * 1024 * fct) << std::endl;
+    std::ofstream ss_tx("vPIFOResult/flowPktsTx", std::ios::out | std::ios::app);
+    ss_tx << i + 1 << "   " << flowPktsTx[i] << std::endl;
+    std::ofstream ss_rx("vPIFOResult/flowPktsRx", std::ios::out | std::ios::app);
+    ss_rx << i + 1 << "   " << flowPktsRx[i] << std::endl;
+  }
+
+  endt = clock();
+  cout << (double)(endt - begint) / CLOCKS_PER_SEC << "\n";
+  cout << "totalPktSize:" << totalPktSize << std::endl;
+  cout << "total_send:" << total_send << endl;
+  return 0;
+}
