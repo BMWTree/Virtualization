@@ -6,7 +6,7 @@
 using namespace std;
 
 string getPcapFileName(int id1, int id2){
-    return "../trace/PcapTrace-" + to_string(id1) + "-" + to_string(id2) + ".pcap";
+    return "../trace-udp/PcapTrace-" + to_string(id1) + "-" + to_string(id2) + ".pcap";
 }
 
 string getFlowIdFileName(int id1, int id2){
@@ -19,6 +19,6 @@ int main(int argc, char * argv[]){
     //         extractFlowId(getPcapFileName(i, j).c_str(), getFlowIdFileName(i, j).c_str());
     //     }
     // }
-    extractFlowId(getPcapFileName(6, 0).c_str(), getFlowIdFileName(6, 0).c_str());
+    extractFlowId(getPcapFileName(6, 3).c_str(), getFlowIdFileName(6, 3).c_str());
     return 0;
 }

@@ -13,11 +13,11 @@ const char *TypeNames[] = {"Push", "Pop", "WriteBack","Locked",""};
 
 // To csl: const parameters is here!
 // L is the cycle needed to solve a task in the BMW Tree 
-const int L = 5;
+const int L = 8;
 // M is the number of users, but user 0 is root
-const int M = 3;
+const int M = 40;
 // N is the number of RPUs, also the number of Task Lists
-const int N = 5;
+const int N = 40;
 // S is the threshold that triggers the anti-starvation mechanism
 // const int S = 240;
 const int S = 1e9 + 7;
@@ -134,6 +134,15 @@ void tree_print (int fa, int root, int dep) {
         tree_print(root, node[root].son[1], dep + 1);
 }
 
+pair<int, int> top (int root) {
+    pair<int, int> ret;
+    int go_down = 0;
+    if (node[root].min[0] > node[root].min[1])
+        go_down = 1;
+    ret = node[root].min[go_down];
+    return ret;
+}
+
 int task_num[M], use_num, Q, wait_time[N];
 int starve_count, hungry_count, hungry_delay, send_count[N], locked[N], beggar;
 int push_num[M], pop_num[M], push_sum, pop_sum;
@@ -164,6 +173,17 @@ void pop_task (int i) {
         wait_time[i] = 0;
 
 
+}
+
+int task_list_empty_cnt = 100;
+
+void check_task_list_empty(){
+    for(int i=0; i<N; i++){
+        if(!task_list[i].empty()){
+            return;
+        }
+    }
+    task_list_empty_cnt--;
 }
 
 // To speed up the simulation, skip the idle phase with a flag
@@ -205,9 +225,26 @@ const int FLOW_NUM = 6;
 vector<queue<A_Push>> perFlowPushQueue(FLOW_NUM);
 vector<int> perFlowPopQueue(FLOW_NUM);
 vector<int> perFlowState(FLOW_NUM);
-vector<int> perFlowpreState(FLOW_NUM);
 
 unordered_map<int, int> PFMap;
+
+bool noPop(){
+    for(int i=0; i<FLOW_NUM; i++){
+        if(perFlowPopQueue[i] > 0){
+            return false;
+        }
+    }
+    return true;
+}
+
+bool noPush(){
+    for(int i=0; i<FLOW_NUM; i++){
+        if(!perFlowPushQueue[i].empty()){
+            return false;
+        }
+    }
+    return true;
+}
 
 void readPFMap(const std::string& pfmapFilePath, std::unordered_map<int, int>& pfmap) {
     // 打开文件
@@ -299,49 +336,96 @@ int read_line() {
 
 int last_flow_push = 0;
 int last_flow_pop = 0;
+// void try_push_push_task(){
+//     // try push task into task list
+//     for(int i=0; i<FLOW_NUM; i++){
+//         int cur = (last_flow_push + i) % FLOW_NUM;
+//         // std::cout << "flow State: " << perFlowState[cur] << std::endl;
+//         // std::cout << "flow Queue Empty: " << perFlowPushQueue[cur].empty() << std::endl;
+//         if(perFlowState[cur]==0 && !perFlowPushQueue[cur].empty()){
+//             A_Push a_push = perFlowPushQueue[cur].front();
+//             perFlowPushQueue[cur].pop();
+//             perFlowState[cur] = 1;
+//             // std::cout << "a push task: " << cur << std::endl;
+//             push_task(a_push.treeid % N, (Task){Push, a_push.treeid, a_push.p0, a_push.meta});
+//             write_push_line(a_push.meta);
+//             push_task(0, (Task){Push, 0, a_push.p1, a_push.treeid});
+//             task_num[0]++, task_num[a_push.treeid]++;
+//             last_flow_push = (cur+1) % FLOW_NUM;
+//             break;
+//         }
+//         if(i==FLOW_NUM-1){
+//             last_flow_push = (cur+1) % FLOW_NUM;
+//         }
+//     }
+// }
+
 void try_push_push_task(){
     // try push task into task list
     for(int i=0; i<FLOW_NUM; i++){
-        int cur = (last_flow_push + i) % FLOW_NUM;
+        int cur = i;
         // std::cout << "flow State: " << perFlowState[cur] << std::endl;
         // std::cout << "flow Queue Empty: " << perFlowPushQueue[cur].empty() << std::endl;
-        if(perFlowState[cur]==0 && !perFlowPushQueue[cur].empty()){
+        if(!perFlowPushQueue[cur].empty()){
             A_Push a_push = perFlowPushQueue[cur].front();
             perFlowPushQueue[cur].pop();
-            perFlowState[cur] = 1;
-            perFlowpreState[cur] = 1;
+            // perFlowState[cur] = 1;
             // std::cout << "a push task: " << cur << std::endl;
             push_task(a_push.treeid % N, (Task){Push, a_push.treeid, a_push.p0, a_push.meta});
             write_push_line(a_push.meta);
             push_task(0, (Task){Push, 0, a_push.p1, a_push.treeid});
             task_num[0]++, task_num[a_push.treeid]++;
-            last_flow_push = (cur+1) % FLOW_NUM;
-            break;
-        }
-        if(i==FLOW_NUM-1){
-            last_flow_push = (cur+1) % FLOW_NUM;
         }
     }
 }
 
+// void try_push_pop_task(){
+//     for(int i=0; i<FLOW_NUM; i++){
+//         int cur = (last_flow_pop + i) % FLOW_NUM;
+//         if(perFlowState[cur] == 1 && perFlowPopQueue[cur] > 0){
+//             perFlowPopQueue[cur]--;
+//             perFlowState[cur] = 0;
+//             // std::cout << "a pop task: " << cur << std::endl;
+//             push_task(0, (Task){Pop, 0});
+//             task_num[0]--;
+//             // printf("log: read pop\n");
+//             last_flow_pop = (cur+1) % FLOW_NUM;
+//             break;
+//         }
+//         if(i==FLOW_NUM-1){
+//             last_flow_pop = (cur+1) % FLOW_NUM;
+//         }
+//     }
+    
+// }
+
 void try_push_pop_task(){
-    for(int i=0; i<FLOW_NUM; i++){
-        int cur = (last_flow_pop + i) % FLOW_NUM;
-        if(perFlowpreState[cur] == 1 && perFlowPopQueue[cur] > 0){
-            perFlowPopQueue[cur]--;
-            perFlowpreState[cur] = 0;
-            // std::cout << "a pop task: " << cur << std::endl;
+    if(top(tree[0]).first != inf && top(tree[top(tree[0]).second]).first != inf){
+        int pop_meta = top(tree[top(tree[0]).second]).second;
+        int cur_flow = PFMap[pop_meta];
+        if(perFlowPopQueue[cur_flow] > 0){
+            perFlowPopQueue[cur_flow]--;
+            // perFlowState[cur_flow] = 0;
             push_task(0, (Task){Pop, 0});
             task_num[0]--;
-            // printf("log: read pop\n");
-            last_flow_pop = (cur+1) % FLOW_NUM;
-            break;
-        }
-        if(i==FLOW_NUM-1){
-            last_flow_pop = (cur+1) % FLOW_NUM;
         }
     }
-    
+    // for(int i=0; i<FLOW_NUM; i++){
+    //     int cur = (last_flow_pop + i) % FLOW_NUM;
+    //     if(perFlowState[cur] == 1 && perFlowPopQueue[cur] > 0){
+    //         perFlowPopQueue[cur]--;
+    //         perFlowState[cur] = 0;
+    //         // std::cout << "a pop task: " << cur << std::endl;
+    //         push_task(0, (Task){Pop, 0});
+    //         task_num[0]--;
+    //         // printf("log: read pop\n");
+    //         last_flow_pop = (cur+1) % FLOW_NUM;
+    //         break;
+    //     }
+    //     if(i==FLOW_NUM-1){
+    //         last_flow_pop = (cur+1) % FLOW_NUM;
+    //     }
+    // }
 }
 
 // To csl: output is here!
@@ -386,12 +470,23 @@ int main(int argc, char * argv[]) {
     Task t;
     pair<int, int> pa;
 
+    while(read_line());
+
+    skipping_flag = 0;
+
     while(1) {
         // shortcut: skipping_flag != 0  -> no read, just run a cycle
-        if (!skipping_flag && !read_line())
+        // if (!skipping_flag && !read_line())
+        //     break;
+        if(noPush() && noPop() && task_list_empty_cnt <= 0){
             break;
+        }
+        check_task_list_empty();
         try_push_push_task();
-        try_push_pop_task();
+        // try_push_pop_task();
+        if(cycle > 50){
+            try_push_pop_task();
+        }
         cycle++;
         // Processed cycle has excceeded the flag, no need to skip
         if (cycle > skipping_flag)
@@ -406,6 +501,7 @@ int main(int argc, char * argv[]) {
             if (RPU[i].TTL == L) {
                 if (RPU[i].type == Pop) {
                     pa = pop(tree[RPU[i].root]);
+                    // printf("pop tree  %d, RPU root %d, pri %d, meta %d\n", tree[RPU[i].root], RPU[i].root, pa.first, pa.second);
                     // After a root pop, now we know which tree to pop
                     // printf("pop tree  %d, pri %d, meta %d\n", tree[RPU[i].root], pa.first, pa.second);
                     if (RPU[i].root == 0) {
@@ -421,7 +517,14 @@ int main(int argc, char * argv[]) {
                         // printf("Tree %d, ", i);
                         // write_line(pa.first);
                         // printf("%d\n", pa.first);
-                        perFlowState[PFMap[pa.second]] = 0;
+                        // perFlowState[PFMap[pa.second]] = 0;
+
+                        // int sched_flows = 0;
+                        // for(int j=0; j<FLOW_NUM; j++){
+                        //     sched_flows += perFlowState[j];
+                        // }
+                        // printf("sched_flows: %d\n", sched_flows);
+
                         write_pop_line(pa.second);
                     }
                 }
@@ -432,18 +535,18 @@ int main(int argc, char * argv[]) {
             }
         }
 
-        /* printf("#######\n");
-        for(int i = 0; i<N; i++)
-        {
-            printf("Task List %d: ", i);
-            queue<Task> temp_q = task_list[i];
-            while (!temp_q.empty()) {
-                printf("%s ", TypeNames[temp_q.front().type]);
-                temp_q.pop();
-            }
-            printf("\n");
-        }
-        printf("#######\n"); */
+        // printf("#######\n");
+        // for(int i = 0; i<N; i++)
+        // {
+        //     printf("Task List %d: ", i);
+        //     queue<Task> temp_q = task_list[i];
+        //     while (!temp_q.empty()) {
+        //         printf("%s ", TypeNames[temp_q.front().type]);
+        //         temp_q.pop();
+        //     }
+        //     printf("\n");
+        // }
+        // printf("#######\n");
         
         // Pass down the existing task
         Task nt[2]; // Scrolling array used to pass the task

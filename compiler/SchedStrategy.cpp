@@ -127,7 +127,7 @@ void tagPriorityTillRoot(TreeNode leafNode, std::vector<int>& priorityVec, unsig
 #if CUM_POP
 
 void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, const unsigned char* packet) {
-    if(idle_cycle_cnt > 400){
+    if(idle_cycle_cnt > 4){
         return;
     }
 
@@ -156,7 +156,7 @@ void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, c
             std::cout << "type:0, idle_cycle:" << std::min(thisPacketCycle - curCycle - 1, MAX_INTERVAL_IDLECYCLE) << std::endl;
             idle_cycle_cnt++;
         }else{
-            std::cout << "type:0, idle_cycle:100" << std::endl;
+            std::cout << "type:0, idle_cycle:10" << std::endl;
         }
         
     }
@@ -216,7 +216,7 @@ void tagPriority(const char* pcap_file, const char* trace_file, bool hasPFabric)
 #else
 
 void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, const unsigned char* packet) {
-    if(idle_cycle_cnt > 400){
+    if(idle_cycle_cnt > 4){
         return;
     }
 
@@ -239,7 +239,7 @@ void tagPriorityHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, c
             std::cout << "type:0, idle_cycle:" << std::min(thisPacketCycle - curCycle - 1, MAX_INTERVAL_IDLECYCLE) << std::endl;
             idle_cycle_cnt++;
         }else{
-            std::cout << "type:0, idle_cycle:100" << std::endl;
+            std::cout << "type:0, idle_cycle:10" << std::endl;
         }
     }
     curCycle = thisPacketCycle;
@@ -290,7 +290,7 @@ void tagPriority(const char* pcap_file, const char* trace_file, bool hasPFabric)
 #endif
 
 void printPFMapHandler(unsigned char* user, const struct pcap_pkthdr* pkthdr, const unsigned char* packet) {
-    if(idle_cycle_cnt > 400){
+    if(idle_cycle_cnt > 4){
         return;
     }
 

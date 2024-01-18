@@ -15,7 +15,8 @@ map<string, TreeNode> flowNodeMap;
 
 TreeNode createTreeNode(SchedStrategy strategy, PerfInfo minPerf){
     TreeNode node = new TreeNode_;
-    node->nodeId = nodeId++;
+    node->nodeId = nodeId;
+    nodeId += 10;
     node->strategy = strategy;
     node->minPerf = minPerf;
     node->actualPerf = new PerfInfo_;
@@ -26,7 +27,8 @@ TreeNode createTreeNode(SchedStrategy strategy, PerfInfo minPerf){
 
 TreeNode createTreeRoot(SchedStrategy strategy, PerfInfo actualPerf, PerfInfo minPerf){
     TreeNode node = new TreeNode_;
-    node->nodeId = nodeId++;
+    node->nodeId = nodeId;
+    nodeId += 10;
     node->strategy = strategy;
     node->minPerf = minPerf;
     node->actualPerf = actualPerf;

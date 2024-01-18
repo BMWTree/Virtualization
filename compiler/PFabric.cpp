@@ -50,6 +50,10 @@ void pFabricInitFlowRemainingSize(const char* pcap_file){
 
     // 关闭 pcap 文件
     pcap_close(pcap_handle);
+
+    for(auto it = FlowRemainingSizeTable.begin(); it != FlowRemainingSizeTable.end(); ++it){
+        std::cout << it->first << " " << it->second << std::endl;
+    }
     
     return;
 }
@@ -63,7 +67,7 @@ int calPFabricPriority(unsigned char* user, const struct pcap_pkthdr* pkthdr, co
 
     assert(priority > 0);
 
-    FlowRemainingSizeTable[flowId] -= pkthdr->len;
+    // FlowRemainingSizeTable[flowId] -= pkthdr->len;
 
     return priority;
 }
