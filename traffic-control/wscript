@@ -19,6 +19,7 @@ def build(bld):
       'model/pie-queue-disc.cc',
       'model/MyPipeline.cc',
       'model/MyScheduling.cc',
+      'model/SimplePIFO.cc',
       'model/vPIFO.cc',
       'helper/traffic-control-helper.cc',
       'helper/queue-disc-container.cc'
@@ -43,6 +44,7 @@ def build(bld):
       'model/pie-queue-disc.h',
       'model/MyPipeline.h',
       'model/MyScheduling.h',
+      'model/SimplePIFO.h',
       'model/vPIFO.h',
       'helper/traffic-control-helper.h',
       'helper/queue-disc-container.h'

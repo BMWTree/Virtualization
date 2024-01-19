@@ -12,7 +12,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * ==== Full network simulation experiment for vPIFO
+ * ==== Full network simulation experiment for SimplePIFO
  * ==== 4 spine 9 leaf 144 server  leaf-spine topo
  *
  */
@@ -308,7 +308,7 @@ public:
   void Input()
   {
     if (flow_type == WebSearch) {
-      string path = "vPIFOResult/flowlabel.txt";
+      string path = "SimpleResult/flowlabel.txt";
       Output.open(path);
       Output << flow_num << endl;
     }
@@ -416,7 +416,7 @@ int main(int argc, char *argv[])
   {
     tch.Uninstall(devices[i]);
   }
-  tch.SetRootQueueDisc("ns3::vPIFO");
+  tch.SetRootQueueDisc("ns3::SimplePIFO");
   for (int i = 0; i < LINK_CNT; ++i)
   {
     tch.Install(devices[i]);
@@ -460,15 +460,15 @@ int main(int argc, char *argv[])
   }
   
   sort(flow_info, flow_info + websearch_count, FlowComp);
-
-  ofstream ss_fct("vPIFOResult/AllFct.txt", std::ios::out | std::ios::app);
+  
+  ofstream ss_fct("SimpleResult/AllFct.txt", std::ios::out | std::ios::app);
   for (uint32_t i = 0; i < websearch_count; ++i) {
     ss_fct << flow_info[i].time << " " << flow_info[i].size << " " <<
         flow_info[i].size * 8 * PKTSIZE / (1024 * 1024 * flow_info[i].time) << 
         " " << flow_info[i].tenant << endl; 
   }
   
-  ofstream ss_95("vPIFOResult/95Fct.txt", std::ios::out | std::ios::app);
+  ofstream ss_95("SimpleResult/95Fct.txt", std::ios::out | std::ios::app);
   for (uint32_t i = 0, j, k; i < websearch_count;) {
     j = i;
     while (flow_info[j].tenant == flow_info[i].tenant)

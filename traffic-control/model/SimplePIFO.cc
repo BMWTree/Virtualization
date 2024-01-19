@@ -1,27 +1,27 @@
-#include "vPIFO.h"
+#include "SimplePIFO.h"
 
 namespace ns3
 {
     class Node;
-    const int vPIFO::ROOT = 233;
-    const int vPIFO::SIZE = ((1 << 10) - 1) / 3;
+    const int SimplePIFO::ROOT = 233;
+    const int SimplePIFO::SIZE = ((1 << 10) - 1) / 3;
     
-    NS_OBJECT_ENSURE_REGISTERED(vPIFO);
-    TypeId vPIFO::GetTypeId(void)
+    NS_OBJECT_ENSURE_REGISTERED(SimplePIFO);
+    TypeId SimplePIFO::GetTypeId(void)
 	{
-		static TypeId tid = TypeId("ns3::vPIFO")
+		static TypeId tid = TypeId("ns3::SimplePIFO")
 			.SetParent<QueueDisc>()
 			.SetGroupName("TrafficControl")
-			.AddConstructor<vPIFO>();
+			.AddConstructor<SimplePIFO>();
 		return tid;
 	}
 
-    bool vPIFO::IsHadoop(int x)
+    bool SimplePIFO::IsHadoop(int x)
     {
         return (x % 10) > (x / 10);
     }
 
-    vPIFO::vPIFO()
+    SimplePIFO::SimplePIFO()
     {
         flow_map.clear();
         sch_tree.clear();
@@ -30,33 +30,16 @@ namespace ns3
             bypath_queue.pop();
         root_size = 0;
         
-        // Build the scheduling tree
-
-        // Root node: root to tenant group
-        sch_tree[ROOT] = std::make_shared<SP>();
-        
-        // Layer 1: tenant group to tenant type
-        for (int i = 0; i <= 9; ++i)
-            sch_tree[i] = std::make_shared<SP>();
-
-        // Layer 2: tenant type to tenant
-        for (int i = 0, j; i <= 9; ++i)
+        // Only WebSearch tenant need the scheduling tree
+        for (int i = 0; i <= 99; ++i)
         {
-            j = 10 + i * 2;
-            sch_tree[j] = std::make_shared<WFQ>(i + 1);
-            sch_tree[j + 1] = std::make_shared<WFQ>(10 - i - 1);
-        }
-
-        // Layer 3: only for Web Search tenant, tenant to flow
-        for (int i = 100; i <= 199; ++i)
-        {
-            if (IsHadoop(i - 100))
+            if (IsHadoop(i))
                 continue;
             sch_tree[i] = std::make_shared<pFabric>();
         }
     }
 
-    std::string vPIFO::GetFlowLabel(Ptr<QueueDiscItem> item)
+    std::string SimplePIFO::GetFlowLabel(Ptr<QueueDiscItem> item)
     {
         //printf("my log: flow label?\n");
         Ptr<const Ipv4QueueDiscItem> ipItem =
@@ -80,11 +63,11 @@ namespace ns3
         return flowLabel;
     }
     
-    void vPIFO::InitializeParams(void) {
+    void SimplePIFO::InitializeParams(void) {
         // Read the Web Search traffic to initialize pFabric flow size
         uint32_t id = this->GetNetDevice()->GetNode()->GetId();
         std::ifstream infile;
-        infile.open("vPIFOResult/flowlabel.txt");
+        infile.open("SimpleResult/flowlabel.txt");
         int no, size, tenant;
         uint32_t src_ip, dst_ip;
         string flow_label;
@@ -104,11 +87,11 @@ namespace ns3
             }*/
             flow_map[flow_label] = ++queue_cnt;
             queue_map[queue_cnt] = std::queue<Ptr<QueueDiscItem>>();
-            sch_tree[tenant + 100]->InitializeSize(queue_cnt, size);
+            sch_tree[tenant]->InitializeSize(queue_cnt, size);
         }
     }
 
-    bool vPIFO::DoEnqueue(Ptr<QueueDiscItem> item)
+    bool SimplePIFO::DoEnqueue(Ptr<QueueDiscItem> item)
     {
         TenantTag my_tag;
         Ptr<Packet> packet = GetPointer(item->GetPacket());
@@ -130,41 +113,31 @@ namespace ns3
         }
         root_size++;
 
-        int group = tenant / 10;
-        long long rk1 = sch_tree[ROOT]->RankComputation(group, 0);
-        pipe.AddPush(ROOT, rk1, group);
-
-        int type_id = 10 + group * 2 + IsHadoop(tenant);
-        long long rk2 = sch_tree[group]->RankComputation(type_id, 0);
-        pipe.AddPush(group, rk2, type_id);
-
-        int tenant_id = 100 + tenant;
-        int packet_size = packet->GetSize();
-        long long rk3 = sch_tree[type_id]->RankComputation(
-            tenant_id, packet_size);
-        pipe.AddPush(type_id, rk3, tenant_id);
-
-        // A Hadoop tenant, all packets can be set in the same real queue
+        // A Hadoop tenant, the priority is arrival time
         if (IsHadoop(tenant))
         {
-            if (!queue_map.count(tenant_id))
-                queue_map[tenant_id] = std::queue<Ptr<QueueDiscItem>>();
-            queue_map[tenant_id].push(item);
+            time++;
+            tenant += 100;
+            if (!queue_map.count(tenant))
+                queue_map[tenant] = std::queue<Ptr<QueueDiscItem>>();
+            // Directly and only insert to the root queue
+            pipo.AddPush(ROOT, time, tenant);
+            queue_map[tenant].push(item);
         }
         // A WebSearch tenant, each flow need a real packet queue
         else
         {
             string flow_label = GetFlowLabel(item);
             int flow_id = flow_map[flow_label];
-            long long rk4 = sch_tree[tenant_id]->RankComputation(flow_id, 0);
+            long long pri = sch_tree[tenant]->RankComputation(flow_id, 0);
             //printf("my log: web search pfabric flow rank %d %d\n", tenant, rk4);
-            pipe.AddPush(tenant_id, rk4, flow_id);
+            pipo.AddPush(ROOT, pri, flow_id);
             queue_map[flow_id].push(item);
         }
         return true;
     }
 
-    Ptr<QueueDiscItem> vPIFO::DoDequeue()
+    Ptr<QueueDiscItem> SimplePIFO::DoDequeue()
     {
         if (!bypath_queue.empty()) {
             Ptr<QueueDiscItem> item = bypath_queue.front();
@@ -172,10 +145,10 @@ namespace ns3
             return item;
         }
         
-        int ans = pipe.GetToken();
+        int ans = pipo.GetToken();
         // No packet in buffer now
         if (ans == -1) {
-            //empty_queue++;
+            // empty_queue++;
             // printf("? empty ans %d\n", empty_queue);
             return nullptr;
         }
@@ -183,27 +156,25 @@ namespace ns3
         Ptr<QueueDiscItem> item = queue_map[ans].front();
         queue_map[ans].pop();
 
-        //printf("my log: has a real packet %d!", ans);
-        // cout << Simulator::Now() << endl;
+        // printf("my log: has a real packet %d!\n", ans);
+        
         TenantTag my_tag;
         Ptr<Packet> packet = GetPointer(item->GetPacket());
-        int packet_size = packet->GetSize();
         packet->PeekPacketTag(my_tag);
         int tenant = my_tag.GetTenantId();
-
-        int type_id = 10 + (tenant / 10) * 2 + IsHadoop(tenant);
-        sch_tree[type_id]->Dequeue(packet_size);
         if (!IsHadoop(tenant))
-            sch_tree[tenant + 100]->Dequeue(ans);
+        {
+            sch_tree[tenant]->Dequeue(ans);
+        }
         
         return item;
     }
     
-    Ptr<const QueueDiscItem> vPIFO::DoPeek(void) const {
+    Ptr<const QueueDiscItem> SimplePIFO::DoPeek(void) const {
         return 0;
     }
     
-    bool vPIFO::CheckConfig(void) {
+    bool SimplePIFO::CheckConfig(void) {
         return 1;
     }
 

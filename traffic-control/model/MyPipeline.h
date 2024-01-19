@@ -21,7 +21,7 @@ namespace ns3 {
             // BUFFER_SIZE is the size of pop buffer we want to keep
             static const int BUFFER_SIZE = 4;
             // CYCLE is the cycle time of Pipeline in nanoseconds
-            static const int CYCLE = 5;
+            static const int CYCLE = 200;
             // START_TIME is time in seconds for the Pipeline to start running
             static const int START_TIME = 2;
             // The index of root
@@ -29,9 +29,11 @@ namespace ns3 {
             // S is the threshold that triggers the anti-starvation mechanism
             static const int S = 240;
             // N is the number of RPUs, Operation Lists and height of B
-            static const int N = 10;
+            static const int N = 5;
             // T is the number of Scheduling nodes, as well as number of trees
             static const int T = 240;
+            // END_THRESHOLD is the criterion to end the simulation
+            static const int END_THRESHOLD = 1000000;
             static const int inf = 1e9 + 7;
 
             enum Type {
@@ -70,7 +72,7 @@ namespace ns3 {
             int root_num, wait_time[N], locked[N], beggar;
 
             // Log information
-            int use_num, hungry_count, hungry_delay, starve_count;
+            int empty_count, hungry_count, hungry_delay, starve_count;
 
             // Save the result of pop, start means starting a pop request
             int buffer_num, start_num;

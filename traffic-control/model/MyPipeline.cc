@@ -18,7 +18,7 @@ namespace ns3 {
         beggar = -1;
         root_num = 0;
         
-        use_num = hungry_count = hungry_delay = starve_count = 0;
+        empty_count = hungry_count = hungry_delay = starve_count = 0;
         
         buffer_num = start_num = 0;
         while(!buffer.empty())
@@ -106,6 +106,8 @@ namespace ns3 {
         // Insert pop root task if the pop buffer is not enough
         if (root_num > 0 && start_num < BUFFER_SIZE)
             AddPop(ROOT);
+        
+        int use_num = 0;
         
         // statistics before updating status
         for (int i = 0; i < N; ++i) {
@@ -206,13 +208,13 @@ namespace ns3 {
                     (j < beggar) ? (beggar - j) : (beggar + N - j))
                     flag_nt = 1;
                 if (flag_nt + flag_last == need_pos) {
-                    beggar = beggar;
                     locked[j] = 1;
                     if (need_pos == 2)
                         locked[k] = 1;
                     need_pos = 0;
                     break;
                 }
+                if (need_pos == 0) break;
                 k = j;
                 if (j == beggar)  break;
                 if (j == 0)  j = N;
@@ -239,8 +241,15 @@ namespace ns3 {
                 }
             }
         }
-
-        Simulator::Schedule(NanoSeconds(CYCLE), &Pipeline::WakeUp, this);
+        
+        if (use_num)
+            empty_count = 0;
+        else
+            empty_count++;
+        if (empty_count < END_THRESHOLD)
+            Simulator::Schedule(NanoSeconds(CYCLE), &Pipeline::WakeUp, this);
+        else
+            Simulator::Stop();
     }
 
 }

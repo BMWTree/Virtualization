@@ -1,5 +1,5 @@
-# ifndef VPIFO_H
-# define VPIFO_H
+# ifndef SIMPLEPIFO_H
+# define SIMPLEPIFO_H
 
 # include <fstream>
 # include <sstream>
@@ -15,9 +15,9 @@
 # include "MyScheduling.h"
 
 namespace ns3 {
-    class vPIFO : public QueueDisc{
+    class SimplePIFO : public QueueDisc{
         public:
-            vPIFO();
+            SimplePIFO();
             
             static TypeId GetTypeId(void);
             void InitializeParams(void);
@@ -31,20 +31,20 @@ namespace ns3 {
             static const int ROOT;
             // The size of a queue
             static const int SIZE;
-
+            
+            Pipeline pipo;
+            
             std::unordered_map<string, int> flow_map;
             std::unordered_map<int, std::shared_ptr<Scheduling>> sch_tree;
             std::unordered_map<int, std::queue<Ptr<QueueDiscItem>>> queue_map;
             std::queue<Ptr<QueueDiscItem>> bypath_queue;
             int queue_cnt = 1000;
+            long long time = -1e16;
             int root_size;
             
             // int empty_queue = 0;
 
-            Pipeline pipe;
-
             bool IsHadoop(int x);
-
             std::string GetFlowLabel(Ptr<QueueDiscItem> item); 
     };
 }
